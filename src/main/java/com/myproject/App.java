@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.Collections;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
@@ -24,7 +26,7 @@ public class App {
     }
     private static void addStyledNodes(Graph graph, String prefix, int count, String hexColor) {
         for (int i = 0; i < count; i++) {
-            graph.addNode(prefix + i).setAttribute("ui.style","fill-color: " + hexColor + "; size: 30px;");
+            graph.addNode(prefix + i).setAttribute("ui.style","fill-color: " + hexColor + "; size: 15px;");
         }
     }
     private static List<Integer> rangeList(int n) {
@@ -87,6 +89,12 @@ public class App {
         }
         return list;
     }
+
+
+
+
+
+
     enum PolicyType {
         FW,
         IDS,
@@ -154,7 +162,10 @@ public class App {
 
                 case M://check for middle routers
                     Node foundMBFromM = null;
-                    for (Node cr : currentNode.neighborNodes().toList()) {
+                    List<Node> tempNode; 
+                    List<Node> mutableCopy = new ArrayList<Node>(currentNode.neighborNodes().toList());
+                    Collections.shuffle(mutableCopy);
+                    for (Node cr : mutableCopy) {
                         if (!cr.getId().startsWith(RouterType.CR.name())) continue;
                         if (exploredCoreRouters.contains(cr)) continue;
 
@@ -175,6 +186,35 @@ public class App {
         }
         return currentNode;
     }
+
+    private static Node findClosestMBRandom(PolicyType MBName){
+        switch (MBName) {
+            case FW:
+                int randomIndex = ThreadLocalRandom.current().nextInt(FWList.size());
+                return FWList.get(randomIndex);
+            case IDS:
+                int randomIndex1 = ThreadLocalRandom.current().nextInt(IDSList.size());
+                return IDSList.get(randomIndex1);
+            case WP:
+                int randomIndex2 = ThreadLocalRandom.current().nextInt(WPList.size());
+                return WPList.get(randomIndex2);
+            case TM:
+                int randomIndex3 = ThreadLocalRandom.current().nextInt(TMList.size());
+                return TMList.get(randomIndex3);
+            default:
+                return null;
+        }
+    }
+
+
+    private static List<Node> ERList = new ArrayList<>();
+    private static List<Node> CRList = new ArrayList<>();
+    private static List<Node> MList = new ArrayList<>();
+
+    private static List<Node> FWList = new ArrayList<>();
+    private static List<Node> IDSList = new ArrayList<>();
+    private static List<Node> WPList = new ArrayList<>();
+    private static List<Node> TMList = new ArrayList<>();
 
 
     public static void main(String[] args) {
@@ -199,11 +239,12 @@ public class App {
         String tmColor  = "#27da3f";
 
 
+
         // add nodes core router cr1 er1
         graph = addNodes(graph, "ER", amount_of_edge_routers);
         graph = addNodes(graph, "CR", amount_of_core_routers);
         graph = addNodes(graph, "M", amount_of_main_core_routers);
-        
+
         addStyledNodes(graph, "FW", amount_of_firewalling, fwColor);
         addStyledNodes(graph, "IDS", amount_of_intrusion_detection, idsColor);
         addStyledNodes(graph, "WP", amount_of_web_proxing, wpColor);
@@ -241,15 +282,60 @@ public class App {
         for (Node node : graph) {
             node.setAttribute("ui.label", node.getId());
         }
-
         graph.setAttribute("ui.stylesheet",
-            "node { fill-color: #4A90D9; size: 30px; text-size: 13; text-color: Black; text-style: bold; }" +
+            "node { fill-color: #4A90D9; size: 15px; text-size: 13; text-color: Black; text-style: bold; }" +
             "edge { fill-color: #888; size: 2px; }"
         );
-        
+        // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("FW0"),graph,100).getId());
+        // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("IDS0"),graph,100).getId());
 
-        System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("ER1"),graph,100).getId());
-        
+        // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("TM0"),graph,100).getId());
+
+        // System.out.println("found:"+findClosestMB(PolicyType.IDS,graph.getNode("WP0"),graph,100).getId());
+        for (Node node : graph) {
+            String name = node.getId();
+            if (name.startsWith(PolicyType.FW.name())){
+                FWList.add(node);
+            }
+            else if (name.startsWith(PolicyType.IDS.name())){
+                IDSList.add(node);
+                
+            }
+            else if (name.startsWith(PolicyType.TM.name())){
+                WPList.add(node);
+
+            }
+            else if (name.startsWith(PolicyType.WP.name())){
+                TMList.add(node);
+
+            }
+            else if (name.startsWith(RouterType.CR.name())){
+                ERList.add(node);
+
+            }
+            else if (name.startsWith(RouterType.ER.name())){
+                CRList.add(node);
+
+            }
+            else if (name.startsWith(RouterType.M.name())){
+                MList.add(node);
+            }
+            else
+                System.err.println("something whent wrong" + node.getId());
+        }
+         for (Node node : graph) {
+
+             String name = node.getId();
+             if (name.startsWith(PolicyType.FW.name()) || name.startsWith(PolicyType.IDS.name()) || name.startsWith(PolicyType.TM.name()) || name.startsWith(PolicyType.WP.name()))
+                continue;
+             System.out.print(name+": "+findClosestMB(PolicyType.FW,graph.getNode(name),graph, 100).getId());
+             System.out.print(" "+findClosestMB(PolicyType.IDS,graph.getNode(name),graph, 100).getId());
+             System.out.print(" "+findClosestMB(PolicyType.TM,graph.getNode(name),graph, 100).getId());
+             System.out.print(" "+findClosestMB(PolicyType.WP,graph.getNode(name),graph, 100).getId()+"\n");
+        }
+        for (Node node : graph) {
+            System.err.print("Rand name"+": "+ node.getId()+ " " + findClosestMBRandom(PolicyType.FW)+ " "+ findClosestMBRandom(PolicyType.IDS)+ " "+findClosestMBRandom(PolicyType.TM)+ " "+findClosestMBRandom(PolicyType.WP)+ "\n");
+        }
         graph.display();
     }
 
