@@ -72,7 +72,9 @@ public class App {
     }
     private static HashMap<String, RoutingTable> setRouterEdges(Graph graph, HashMap<String, RoutingTable> tables){
         for (RoutingTable table : tables.values()) {
-            System.out.println(table.getNode());
+            for (PolicyType policy : PolicyType.values()) {
+                System.out.println(policy);
+            }
         }
         return tables;
     }
