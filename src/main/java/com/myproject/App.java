@@ -205,11 +205,11 @@ public class App {
                 return null;
         }
     }
-    private static dixrtrasAlgo(Node node, Graph graph){
-        for(Node _node : graph){
+    // private static dixrtrasAlgo(Node node, Graph graph){
+    //     for(Node _node : graph){
 
-        }
-    }
+    //     }
+    // }
 
     private static List<Node> ERList = new ArrayList<>();
     private static List<Node> CRList = new ArrayList<>();
