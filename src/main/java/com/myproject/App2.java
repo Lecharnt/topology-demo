@@ -15,7 +15,7 @@ import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 
-public class App {
+public class App2 {
     
     private static Graph addNodes(Graph graph, String name, int amount)
     {
@@ -205,11 +205,6 @@ public class App {
                 return null;
         }
     }
-    private static dixrtrasAlgo(Node node, Graph graph){
-        for(Node _node : graph){
-
-        }
-    }
 
     private static List<Node> ERList = new ArrayList<>();
     private static List<Node> CRList = new ArrayList<>();
@@ -225,9 +220,9 @@ public class App {
         System.setProperty("org.graphstream.ui", "swing");
 
         Graph graph = new SingleGraph("Topology");
-        int amount_of_edge_routers = 160;
+        int amount_of_edge_routers = 0;
         int amount_of_core_routers = 16;
-        int amount_of_main_core_routers = 2;
+        int amount_of_main_core_routers = 4;
 
 
         int amount_of_firewalling = 8;
