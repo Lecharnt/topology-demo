@@ -199,7 +199,7 @@ private static Node findClosestMB(PolicyType MBName, Node node, Graph graph, int
         System.setProperty("org.graphstream.ui", "swing");
 
         Graph graph = new SingleGraph("Topology");
-        int amount_of_edge_routers = 160;
+        int amount_of_edge_routers = 50;
         int amount_of_core_routers = 16;
         int amount_of_main_core_routers = 4;
 
@@ -221,18 +221,27 @@ private static Node findClosestMB(PolicyType MBName, Node node, Graph graph, int
         String idsColor = "#aa9a1e";
         String wpColor  = "#a11f94";
         String tmColor  = "#27da3f";
+        String mColor  = "#c8da27";
+
+        String red     = "#E74C3C";
+        String blue    = "#3498DB";
+        String green   = "#2ECC71";
+        String orange  = "#ef12f3";
+        String purple  = "#9B59B6";
+        String cyan    = "#1ABC9C";
+        String yellow  = "#F1C40F";
 
 
 
         // add nodes core router cr1 er1
-        graph = addNodes(graph, "ER", amount_of_edge_routers);
-        graph = addNodes(graph, "CR", amount_of_core_routers);
-        graph = addNodes(graph, "M", amount_of_main_core_routers);
+        addStyledNodes(graph, "ER", amount_of_edge_routers,blue);
+        addStyledNodes(graph, "CR", amount_of_core_routers,green);
+        addStyledNodes(graph, "M", amount_of_main_core_routers,red);
 
-        addStyledNodes(graph, "FW", amount_of_firewalling, fwColor);
-        addStyledNodes(graph, "IDS", amount_of_intrusion_detection, idsColor);
-        addStyledNodes(graph, "WP", amount_of_web_proxing, wpColor);
-        addStyledNodes(graph, "TM", amount_of_traffic_measurement, tmColor);
+        addStyledNodes(graph, "FW", amount_of_firewalling, orange);
+        addStyledNodes(graph, "IDS", amount_of_intrusion_detection, purple);
+        addStyledNodes(graph, "WP", amount_of_web_proxing, cyan);
+        addStyledNodes(graph, "TM", amount_of_traffic_measurement, yellow);
 
         Random rand = new Random();
 
@@ -292,23 +301,43 @@ private static Node findClosestMB(PolicyType MBName, Node node, Graph graph, int
                 crIndex++;
             }
         }
+
+        Collections.shuffle(ERList);
+
+        for (Node er : ERList) {
+
+            // First connection (required)
+            Node cr1 = CRList.get(rand.nextInt(CRList.size()));
+            graph.addEdge(er.getId() + "-" + cr1.getId(), er, cr1);
+
+            // 50% chance of getting a second core router
+            if (rand.nextBoolean()) {
+
+                Node cr2;
+
+                do {
+                    cr2 = CRList.get(rand.nextInt(CRList.size()));
+                } while (cr2 == cr1);
+
+                graph.addEdge(er.getId() + "-" + cr2.getId(), er, cr2);
+            }
+        }
         Collections.shuffle(CRList);
         List<Node> middleBoxes = new ArrayList<>();
+        middleBoxes.clear();
         middleBoxes.addAll(FWList);
         middleBoxes.addAll(IDSList);
         middleBoxes.addAll(WPList);
         middleBoxes.addAll(TMList);
-        middleBoxes.addAll(ERList);
-        
+
         Collections.shuffle(middleBoxes);
 
         crIndex = 0;
-        for (Node node : middleBoxes) {
-            Node crNode = CRList.get(crIndex % CRList.size());
-            graph.addEdge(node.getId() + " " + crNode.getId(), node, crNode);
+        for (Node mb : middleBoxes) {
+            Node cr = CRList.get(crIndex % CRList.size());
+            graph.addEdge(mb.getId() + "-" + cr.getId(), mb, cr);
             crIndex++;
         }
-
         // add the labes to the graph nodes
 
         for (Node node : graph) {
@@ -316,7 +345,7 @@ private static Node findClosestMB(PolicyType MBName, Node node, Graph graph, int
         }
         graph.setAttribute("ui.stylesheet",
             "node { fill-color: #4A90D9; size: 15px; text-size: 13; text-color: Black; text-style: bold; }" +
-            "edge { fill-color: #888; size: 2px; }"
+            "edge { fill-color: #000000; size: 2px; }"
         );
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("FW0"),graph,100).getId());
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("IDS0"),graph,100).getId());
@@ -361,7 +390,7 @@ Map<String, List<Node>> allLists = new HashMap<>();
         for (Node node : graph) {
             System.err.print("Rand name"+": "+ node.getId()+ " " + findClosestMBRandom(PolicyType.FW)+ " "+ findClosestMBRandom(PolicyType.IDS)+ " "+findClosestMBRandom(PolicyType.TM)+ " "+findClosestMBRandom(PolicyType.WP)+ "\n");
         }
-        graph.display();
+        graph.display().enableAutoLayout();
     }
 
 }
