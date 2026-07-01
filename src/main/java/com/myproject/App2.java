@@ -279,13 +279,13 @@ private static HashMap<String, Double> findClosestMBList(PolicyType mbType, Node
         HashMap<String, RoutingTable> routers = new HashMap<String, RoutingTable>();
         
 
-        String red     = "#E74C3C";
-        String blue    = "#dbd534";
-        String green   = "#2ecc31";
-        String orange  = "#12f3e0";
-        String purple  = "#1100ff";
-        String cyan    = "#ff00fb";
-        String yellow  = "#730909";
+        String red     = "#e74d3c74";
+        String blue    = "#8e8a06";
+        String green   = "#2ecc3175";
+        String orange  = "#037d73";
+        String purple  = "#1100ff6b";
+        String cyan    = "#ff00fb74";
+        String yellow  = "#73090969";
 
 
 
@@ -399,7 +399,7 @@ private static HashMap<String, Double> findClosestMBList(PolicyType mbType, Node
         }
         graph.setAttribute("ui.stylesheet",
             "node { fill-color: #4A90D9; size: 15px; text-size: 13; text-color: Black; text-style: bold; }" +
-            "edge { fill-color: #000000; size: 2px; }"
+            "edge { fill-color: #00000030; size: 2px; }"
         );
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("FW0"),graph,100).getId());
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("IDS0"),graph,100).getId());
