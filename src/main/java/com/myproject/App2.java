@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.Collections;
+import java.util.Comparator;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
@@ -180,6 +181,52 @@ private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, i
         dijkstra.clear();
     }
 }
+private static HashMap<String, Double> findClosestMBList(PolicyType mbType, Node source, Graph graph, int maxHops) {
+    if (source == null || graph == null) {
+        return null;
+    }
+    HashMap<String, Double> testin = new HashMap<String, Double>();
+    Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, null);
+
+    try {
+        dijkstra.init(graph);
+        dijkstra.setSource(source);
+        dijkstra.compute();
+
+        Node closestNode = null;
+        double shortestDistance = 10000;
+
+        for (Node candidate : graph) {
+
+            if (!candidate.getId().startsWith(mbType.name()))
+                continue;
+
+            if (candidate.equals(source))
+                continue;
+
+            double distance = dijkstra.getPathLength(candidate);
+
+            
+            if (Double.isInfinite(distance))
+                continue;
+
+            testin.put(candidate.getId(), distance);
+
+            if (distance > maxHops)
+                continue;
+
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+                closestNode = candidate;
+            }
+        }
+
+        return testin;
+    }
+    finally {
+        dijkstra.clear();
+    }
+}
 
     private static Node findClosestMBRandom(PolicyType MBName){
         List<Node> list;
@@ -218,10 +265,10 @@ private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, i
         int amount_of_main_core_routers = 4;
 
 
-        int amount_of_firewalling = 2;
-        int amount_of_intrusion_detection = 3;
+        int amount_of_firewalling = 8;
+        int amount_of_intrusion_detection = 8;
         int amount_of_web_proxing = 4;
-        int amount_of_traffic_measurement = 6;
+        int amount_of_traffic_measurement = 4;
 
         int[] values = {2, 2, 6, 6};
         List<Integer> argsList = new ArrayList<Integer>();
@@ -315,11 +362,9 @@ private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, i
 
         for (Node er : ERList) {
 
-            // First connection (required)
             Node cr1 = CRList.get(rand.nextInt(CRList.size()));
             graph.addEdge(er.getId() + "-" + cr1.getId(), er, cr1);
 
-            // 50% chance of getting a second core router
             if (rand.nextBoolean()) {
 
                 Node cr2;
@@ -395,10 +440,36 @@ Map<String, List<Node>> allLists = new HashMap<>();
                 + " " + (ids != null ? ids.getId() : "none")
                 + " " + (tm  != null ? tm.getId()  : "none")
                 + " " + (wp  != null ? wp.getId()  : "none"));
+            HashMap<String, Double> fwL  = findClosestMBList(PolicyType.FW,  graph.getNode(name), graph, 100);
+            HashMap<String, Double> idsL = findClosestMBList(PolicyType.IDS, graph.getNode(name), graph, 100);
+            HashMap<String, Double> tmL  = findClosestMBList(PolicyType.TM,  graph.getNode(name), graph, 100);
+            HashMap<String, Double> wpL  = findClosestMBList(PolicyType.WP,  graph.getNode(name), graph, 100);
+
+            fwL.forEach((key, value) -> {
+                System.out.print("| "+key + " Hops: " + value);
+            });
+                        System.err.println();
+            idsL.forEach((key, value) -> {
+                System.out.print("| " + key + " Hops: " + value);
+            });
+                        System.err.println();
+            tmL.forEach((key, value) -> {
+                System.out.print("| " + key + " Hops: " + value);
+            });
+                        System.err.println();
+            wpL.forEach((key, value) -> {
+                System.out.print("| " + key + " Hops: " + value);
+            });
+            System.err.println();
+            System.err.println();
+
+            System.err.println();
+            System.err.println();
+
         }
-        for (Node node : graph) {
-            System.err.print("Rand name"+": "+ node.getId()+ " " + findClosestMBRandom(PolicyType.FW)+ " "+ findClosestMBRandom(PolicyType.IDS)+ " "+findClosestMBRandom(PolicyType.TM)+ " "+findClosestMBRandom(PolicyType.WP)+ "\n");
-        }
+        // for (Node node : graph) {
+        //     System.err.print("Rand name"+": "+ node.getId()+ " " + findClosestMBRandom(PolicyType.FW)+ " "+ findClosestMBRandom(PolicyType.IDS)+ " "+findClosestMBRandom(PolicyType.TM)+ " "+findClosestMBRandom(PolicyType.WP)+ "\n");
+        // }
         graph.display().enableAutoLayout();
     }
 
