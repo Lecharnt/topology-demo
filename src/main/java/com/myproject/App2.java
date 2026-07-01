@@ -217,11 +217,6 @@ private static Node findClosestMB(PolicyType MBName, Node node, Graph graph, int
 
         HashMap<String, RoutingTable> routers = new HashMap<String, RoutingTable>();
         
-        String fwColor  = "#ffaabb";
-        String idsColor = "#aa9a1e";
-        String wpColor  = "#a11f94";
-        String tmColor  = "#27da3f";
-        String mColor  = "#c8da27";
 
         String red     = "#E74C3C";
         String blue    = "#3498DB";
