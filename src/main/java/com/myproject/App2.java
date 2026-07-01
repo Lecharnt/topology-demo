@@ -137,34 +137,48 @@ public class App2 {
 
         return null;
     }
-private static Node findClosestMB(PolicyType MBName, Node node, Graph graph, int MaxHops) {
-    if (node == null) {
+private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, int maxHops) {
+    if (source == null || graph == null) {
         return null;
     }
 
     Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, null);
-    dijkstra.init(graph);
-    dijkstra.setSource(node);
-    dijkstra.compute();
 
-    Node closest = null;
-    double closestDistance = Double.POSITIVE_INFINITY;
+    try {
+        dijkstra.init(graph);
+        dijkstra.setSource(source);
+        dijkstra.compute();
 
-    for (Node candidate : graph) {
-        if (!candidate.getId().startsWith(MBName.name())) {
-            continue;
+        Node closestNode = null;
+        double shortestDistance = 10000;
+
+        for (Node candidate : graph) {
+
+            if (!candidate.getId().startsWith(mbType.name()))
+                continue;
+
+            if (candidate.equals(source))
+                continue;
+
+            double distance = dijkstra.getPathLength(candidate);
+
+            if (Double.isInfinite(distance))
+                continue;
+
+            if (distance > maxHops)
+                continue;
+
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+                closestNode = candidate;
+            }
         }
 
-        double distance = dijkstra.getPathLength(candidate);
-
-        if (distance <= MaxHops && distance < closestDistance) {
-            closestDistance = distance;
-            closest = candidate;
-        }
+        return closestNode;
     }
-
-    dijkstra.clear();
-    return closest;
+    finally {
+        dijkstra.clear();
+    }
 }
 
     private static Node findClosestMBRandom(PolicyType MBName){
