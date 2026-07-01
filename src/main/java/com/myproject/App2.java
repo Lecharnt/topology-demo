@@ -280,12 +280,12 @@ private static HashMap<String, Double> findClosestMBList(PolicyType mbType, Node
         
 
         String red     = "#E74C3C";
-        String blue    = "#3498DB";
-        String green   = "#2ECC71";
-        String orange  = "#ef12f3";
-        String purple  = "#9B59B6";
-        String cyan    = "#1ABC9C";
-        String yellow  = "#F1C40F";
+        String blue    = "#dbd534";
+        String green   = "#2ecc31";
+        String orange  = "#12f3e0";
+        String purple  = "#1100ff";
+        String cyan    = "#ff00fb";
+        String yellow  = "#730909";
 
 
 
