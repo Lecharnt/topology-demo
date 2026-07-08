@@ -642,7 +642,7 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
         }
         graph.setAttribute("ui.stylesheet",
             "node { fill-color: #4A90D9; size: 15px; text-size: 13; text-color: Black; text-style: bold; }" +
-            "edge { fill-color: #00000030; size: 2px; }"
+            "edge { fill-color: #000000; size: 2px; }"
         );
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("FW0"),graph,100).getId());
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("IDS0"),graph,100).getId());

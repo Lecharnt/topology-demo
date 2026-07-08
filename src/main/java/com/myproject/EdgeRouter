@@ -1,0 +1,23 @@
+import org.graphstream.graph.Node;
+import java.util.HashMap;
+
+public class EdgeRouter {
+    Node node;
+    HashMap<String, Integer> flows = new HashMap<>();
+
+    public static void EdgeRouter(Node node_){
+        this.node = node_;
+    }
+    public static void setFlows(HashMap<String, Integer> flows_){
+
+    }
+    public static void addFlow(){
+
+    }
+    public static void removeFlow(){
+
+    }
+    public static void clearFlows(){
+
+    }
+} 
