@@ -959,24 +959,84 @@ public class App2 {
     FWpackest.forEach((key, value) -> {
         System.out.print(" | "+key + " pakects enter: " + value);
     });
+    System.out.println();
+    String fwMinBox = null, fwMaxBox = null;
+    int fwMinPackets = Integer.MAX_VALUE, fwMaxPackets = Integer.MIN_VALUE;
+    for (Map.Entry<String, Integer> entry : FWpackest.entrySet()) {
+        if (entry.getValue() < fwMinPackets) {
+            fwMinPackets = entry.getValue();
+            fwMinBox = entry.getKey();
+        }
+        if (entry.getValue() > fwMaxPackets) {
+            fwMaxPackets = entry.getValue();
+            fwMaxBox = entry.getKey();
+        }
+    }
+    System.out.println("FW min: " + fwMinBox + " packets=" + fwMinPackets);
+    System.out.println("FW max: " + fwMaxBox + " packets=" + fwMaxPackets);
     System.err.println();
     System.err.println();
 
     IDSpackest.forEach((key, value) -> {
         System.out.print(" | "+key + " pakects enter: " + value);
     });
+    System.out.println();
+    String idsMinBox = null, idsMaxBox = null;
+    int idsMinPackets = Integer.MAX_VALUE, idsMaxPackets = Integer.MIN_VALUE;
+    for (Map.Entry<String, Integer> entry : IDSpackest.entrySet()) {
+        if (entry.getValue() < idsMinPackets) {
+            idsMinPackets = entry.getValue();
+            idsMinBox = entry.getKey();
+        }
+        if (entry.getValue() > idsMaxPackets) {
+            idsMaxPackets = entry.getValue();
+            idsMaxBox = entry.getKey();
+        }
+    }
+    System.out.println("IDS min: " + idsMinBox + " packets=" + idsMinPackets);
+    System.out.println("IDS max: " + idsMaxBox + " packets=" + idsMaxPackets);
     System.err.println();
     System.err.println();
 
     TMpackest.forEach((key, value) -> {
         System.out.print(" | "+key + " pakects enter: " + value);
     });
+    System.out.println();
+    String tmMinBox = null, tmMaxBox = null;
+    int tmMinPackets = Integer.MAX_VALUE, tmMaxPackets = Integer.MIN_VALUE;
+    for (Map.Entry<String, Integer> entry : TMpackest.entrySet()) {
+        if (entry.getValue() < tmMinPackets) {
+            tmMinPackets = entry.getValue();
+            tmMinBox = entry.getKey();
+        }
+        if (entry.getValue() > tmMaxPackets) {
+            tmMaxPackets = entry.getValue();
+            tmMaxBox = entry.getKey();
+        }
+    }
+    System.out.println("TM min: " + tmMinBox + " packets=" + tmMinPackets);
+    System.out.println("TM max: " + tmMaxBox + " packets=" + tmMaxPackets);
     System.err.println();
     System.err.println();
 
     WPpackest.forEach((key, value) -> {
         System.out.print(" | "+key + " pakects enter: " + value);
     });
+    System.out.println();
+    String wpMinBox = null, wpMaxBox = null;
+    int wpMinPackets = Integer.MAX_VALUE, wpMaxPackets = Integer.MIN_VALUE;
+    for (Map.Entry<String, Integer> entry : WPpackest.entrySet()) {
+        if (entry.getValue() < wpMinPackets) {
+            wpMinPackets = entry.getValue();
+            wpMinBox = entry.getKey();
+        }
+        if (entry.getValue() > wpMaxPackets) {
+            wpMaxPackets = entry.getValue();
+            wpMaxBox = entry.getKey();
+        }
+    }
+    System.out.println("WP min: " + wpMinBox + " packets=" + wpMinPackets);
+    System.out.println("WP max: " + wpMaxBox + " packets=" + wpMaxPackets);
         graph.display().enableAutoLayout();
     }
 
