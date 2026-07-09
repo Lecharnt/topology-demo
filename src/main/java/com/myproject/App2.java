@@ -12,8 +12,15 @@ import java.util.Collections;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
+import org.bouncycastle.jce.provider.JDKDSASigner.stdDSA;
 import org.graphstream.algorithm.Dijkstra;
-
+import java.util.Scanner;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 public class App2 {
     
     private static Graph addNodes(Graph graph, String name, int amount)
@@ -89,17 +96,6 @@ public class App2 {
         return list;
     }
 
-
-
-
-
-
-    enum PolicyType {
-        FW,
-        IDS,
-        WP,
-        TM
-    }
     enum RouterType{
         ER,
         CR,
@@ -151,7 +147,6 @@ private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, i
 
         Node closestNode = null;
         double shortestDistance = 10000;
-
         for (Node candidate : graph) {
 
             if (!candidate.getId().startsWith(mbType.name()))
@@ -171,6 +166,14 @@ private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, i
             if (distance < shortestDistance) {
                 shortestDistance = distance;
                 closestNode = candidate;
+            }
+            if (distance == shortestDistance) {
+                Random rand = new Random();
+                boolean randomBool = rand.nextBoolean();
+                if(randomBool){
+                    shortestDistance = distance;
+                    closestNode = candidate;
+                }
             }
         }
 
@@ -487,7 +490,25 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
 
         return mergeSegments(segments);
     }
+    private static Integer getRandomElemantInList(List cool){
+        Random rand = new Random();
+        return rand.nextInt(cool.size());
 
+    }
+    private static Integer getRandomElemant(){
+        Random rand = new Random();
+        int cool =  rand.nextInt(12);
+        if (cool >= 9){
+            return 3;
+        }
+        if (cool >= 6){
+            return 2;
+        }
+        else{
+            return 1;
+        }
+
+    }
     private static List<Node> ERList = new ArrayList<>();
     private static List<Node> CRList = new ArrayList<>();
     private static List<Node> MList = new ArrayList<>();
@@ -498,7 +519,7 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
     private static List<Node> TMList = new ArrayList<>();
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.out.println("THIS IS APP2 RUNNING");
         System.setProperty("org.graphstream.ui", "swing");
         System.setProperty("org.graphstream.ui", "swing");
@@ -576,8 +597,110 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             else
                 System.err.println("something whent wrong" + node.getId());
         }
+        List<EdgeRouter> FakeEdgeRouters = new ArrayList<EdgeRouter>();
+        
+
+        for (Node node : ERList) {
+            FakeEdgeRouters.add(new EdgeRouter(node));
+        }
+        List<Flow> flows = new ArrayList<Flow>();
 
         routers = setRouters(graph);
+        List<String> lines = Files.readAllLines(Paths.get("src/main/java/com/myproject/flowSpread1.txt"));
+        int count3333 = 0;
+        for (String line : lines) {
+            String[] parts = line.trim().split("\\s+");
+            
+            String ip = parts[0];
+            String count = parts[1];
+            Integer cool = Integer.parseInt(count);
+            int element = getRandomElemantInList(FakeEdgeRouters);
+            FakeEdgeRouters.get(element).addFlow(ip, cool);
+            FakeEdgeRouters.get(element).addTotFlow(cool);
+            int temp = getRandomElemant();
+            Flow currentFlow = new Flow(ip, Integer.parseInt(count), FakeEdgeRouters.get(element).getNode());
+
+            String policy = "none";
+            List<PolicyType> flowPolicy = new ArrayList<PolicyType>();
+            switch (temp) {
+                case 1:
+                    policy = "POLICY1";
+                    flowPolicy.add(PolicyType.FW);
+                    flowPolicy.add(PolicyType.IDS);
+                    flowPolicy.add(PolicyType.WP);
+                    break;
+                case 2:
+                    policy = "POLICY2";
+                    flowPolicy.add(PolicyType.FW);
+                    flowPolicy.add(PolicyType.IDS);
+                    break;
+                case 3:
+                    policy = "POLICY3";
+                    flowPolicy.add(PolicyType.IDS);
+                    flowPolicy.add(PolicyType.TM);
+                    break;
+                default:
+                    System.err.println("there was a out of bounce element");
+                    break;
+            }
+            currentFlow.setFlowPolicy(flowPolicy);
+            FakeEdgeRouters.get(element).addPolics(ip,policy);
+            flows.add(currentFlow);
+            if(count3333 >= 50){
+                break;
+            }
+        }
+        int total = 0;
+        int totPackest = 0;
+        int temp1x = 0;
+        int temp2x = 0;
+        int temp3x = 0;
+        for (EdgeRouter edgeRouter : FakeEdgeRouters) {
+            int temp1 = 0;
+            int temp2 = 0;
+            int temp3 = 0;
+            System.out.println("id node element "+ edgeRouter.getNode().getId());
+            System.out.print("id of ip sent first element " + edgeRouter.getFlows().keySet().iterator().next());
+            System.out.println(" | first element amount of flows  " +  edgeRouter.getFlows().values().iterator().next());
+            System.out.println("total pakets in this edge router. "+ edgeRouter.getTotFlow());
+            System.out.println("total flows in this edge router. "+ edgeRouter.getFlows().size());
+
+
+            for (Map.Entry<String, String> entry : edgeRouter.getPolics().entrySet()) {
+                switch (entry.getValue()) {
+                    case "POLICY1":
+                        temp1++;
+                        temp1x++;
+
+                        break;
+                    case "POLICY2":
+                        temp2++;
+                        temp2x++;
+
+                        break;
+                    case "POLICY3":
+                        temp3++; 
+                        temp3x++; 
+
+                        break;
+                    default:
+                        break;
+                }
+            }
+            totPackest += edgeRouter.getTotFlow();
+            total += edgeRouter.getFlows().size();
+
+            // System.out.println("total policy 1: " +temp1 + " | total polcy type2: " +temp2+  " | total policy type 3: "+ temp3);
+            // System.out.println("tot policy: " + edgeRouter.getPolics().size());
+
+            // System.out.println();
+            // System.out.println();
+        }
+        // System.out.println("total flows in network: "+total);
+        // System.out.println("total packets in network: "+totPackest);
+        // System.out.println("avrage packets in network: "+totPackest/total);
+        // System.out.println("total policy type1 in netwok: " +temp1x + " | total polcy type2: " +temp2x+  " | total policy type 3: "+ temp3x);
+
 
 
         Collections.shuffle(MList);
@@ -651,7 +774,7 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
 
         // System.out.println("found:"+findClosestMB(PolicyType.IDS,graph.getNode("WP0"),graph,100).getId());
         
-Map<String, List<Node>> allLists = new HashMap<>();
+        Map<String, List<Node>> allLists = new HashMap<>();
         allLists.put("FWList", FWList);
         allLists.put("IDSList", IDSList);
         allLists.put("WPList", WPList);
@@ -660,13 +783,13 @@ Map<String, List<Node>> allLists = new HashMap<>();
         allLists.put("CRList", CRList);
         allLists.put("MList", MList);
         Map<Node, List<String>> routingTable = new HashMap<>();
-        for (Map.Entry<String, List<Node>> entry : allLists.entrySet()) {
-            System.out.print(entry.getKey() + ": [");
-            for (Node n : entry.getValue()) {
-                System.out.print(n.getId() + " ");
-            }
-            System.out.println("]");
-        }
+        // for (Map.Entry<String, List<Node>> entry : allLists.entrySet()) {
+        //     System.out.print(entry.getKey() + ": [");
+        //     for (Node n : entry.getValue()) {
+        //         System.out.print(n.getId() + " ");
+        //     }
+        //     System.out.println("]");
+        // }
         for (Node node : graph) {
             String name = node.getId();
             if (name.startsWith(PolicyType.FW.name()) || name.startsWith(PolicyType.IDS.name())
@@ -678,43 +801,43 @@ Map<String, List<Node>> allLists = new HashMap<>();
             Node wp  = findClosestMB(PolicyType.WP,  graph.getNode(name), graph, 100);
             routingTable.put(graph.getNode(name), null);
 
-            System.out.println(name + ": "
-                + (fw  != null ? fw.getId()  : "none")
-                + " " + (ids != null ? ids.getId() : "none")
-                + " " + (tm  != null ? tm.getId()  : "none")
-                + " " + (wp  != null ? wp.getId()  : "none"));
+            // System.out.println(name + ": "
+            //     + (fw  != null ? fw.getId()  : "none")
+            //     + " " + (ids != null ? ids.getId() : "none")
+            //     + " " + (tm  != null ? tm.getId()  : "none")
+            //     + " " + (wp  != null ? wp.getId()  : "none"));
             HashMap<String, Double> fwL  = findClosestMBList(PolicyType.FW,  graph.getNode(name), graph, 100);
             HashMap<String, Double> idsL = findClosestMBList(PolicyType.IDS, graph.getNode(name), graph, 100);
             HashMap<String, Double> tmL  = findClosestMBList(PolicyType.TM,  graph.getNode(name), graph, 100);
             HashMap<String, Double> wpL  = findClosestMBList(PolicyType.WP,  graph.getNode(name), graph, 100);
 
             
-            fwL.forEach((key, value) -> {
-                System.out.print("| "+key + " Hops: " + value);
-            });
-                        System.err.println();
-            idsL.forEach((key, value) -> {
-                System.out.print("| " + key + " Hops: " + value);
-            });
-                        System.err.println();
-            tmL.forEach((key, value) -> {
-                System.out.print("| " + key + " Hops: " + value);
-            });
-                        System.err.println();
-            wpL.forEach((key, value) -> {
-                System.out.print("| " + key + " Hops: " + value);
-            });
-            System.err.println();
-            System.err.println();
+            // fwL.forEach((key, value) -> {
+            //     System.out.print("| "+key + " Hops: " + value);
+            // });
+            //             System.err.println();
+            // idsL.forEach((key, value) -> {
+            //     System.out.print("| " + key + " Hops: " + value);
+            // });
+            //             System.err.println();
+            // tmL.forEach((key, value) -> {
+            //     System.out.print("| " + key + " Hops: " + value);
+            // });
+            //             System.err.println();
+            // wpL.forEach((key, value) -> {
+            //     System.out.print("| " + key + " Hops: " + value);
+            // });
+            // System.err.println();
+            // System.err.println();
 
-            System.err.println();
-            System.err.println();
+            // System.err.println();
+            // System.err.println();
 
         }
         // for (Node node : graph) {
         //     System.err.print("Rand name"+": "+ node.getId()+ " " + findClosestMBRandom(PolicyType.FW)+ " "+ findClosestMBRandom(PolicyType.IDS)+ " "+findClosestMBRandom(PolicyType.TM)+ " "+findClosestMBRandom(PolicyType.WP)+ "\n");
         // }
-    System.out.println("path through middle boxes");
+    // System.out.println("path through middle boxes");
 
     List<PolicyType> allTypes = new ArrayList<>();
     allTypes.add(PolicyType.FW);
@@ -723,23 +846,155 @@ Map<String, List<Node>> allLists = new HashMap<>();
     allTypes.add(PolicyType.TM);
 
     Random testRand = new Random();
+    HashMap<String, Integer> FWpackest = new HashMap<>();
+    for (Node iterable_element : FWList) {
+        FWpackest.put(iterable_element.getId(), 0);
+    }
 
-    for (int i = 0; i < 10; i++) {
+    HashMap<String, Integer> IDSpackest = new HashMap<>();
+
+    for (Node iterable_element : IDSList) {
+        IDSpackest.put(iterable_element.getId(), 0);
+        
+    }
+    HashMap<String, Integer> TMpackest = new HashMap<>();
+
+    for (Node iterable_element : TMList) {
+        TMpackest.put(iterable_element.getId(), 0);
+        
+    }
+    HashMap<String, Integer> WPpackest = new HashMap<>();
+
+    for (Node iterable_element : WPList) {
+        WPpackest.put(iterable_element.getId(), 0);
+        
+    }
+    // for (int i = 0; i < 10; i++) {
         List<PolicyType> mbOrder = new ArrayList<>(allTypes);
         Collections.shuffle(mbOrder, testRand);
 
         Node startNode = ERList.get(testRand.nextInt(ERList.size()));
 
-        org.graphstream.graph.Path greedyPath = findGreedyPathThroughMBs(startNode, mbOrder, graph, 1000);
-        org.graphstream.graph.Path optimalPath = findOptimalPathThroughMBs(startNode, mbOrder, graph, 1000);
-        org.graphstream.graph.Path randomPath = findRandomPathThroughMBs(startNode, mbOrder, graph);
+        // org.graphstream.graph.Path greedyPath = findGreedyPathThroughMBs(startNode, mbOrder, graph, 1000);
+        // org.graphstream.graph.Path optimalPath = findOptimalPathThroughMBs(startNode, mbOrder, graph, 1000);
+        // org.graphstream.graph.Path randomPath = findRandomPathThroughMBs(startNode, mbOrder, graph);
 
-        System.out.println(startNode.getId() + " " + mbOrder  + " optimal: " + optimalPath.getEdgeCount()+ " greedy: " + greedyPath.getEdgeCount() + " random: " + randomPath.getEdgeCount());
-        System.out.println("optimal: " + optimalPath.getNodePath());
-        System.out.println("greedy: " + greedyPath.getNodePath());
-        System.out.println("random: "+  randomPath.getNodePath());
-        System.out.println();
-    }
+        // System.out.println(startNode.getId() + " " + mbOrder  + " optimal: " + optimalPath.getEdgeCount()+ " greedy: " + greedyPath.getEdgeCount() + " random: " + randomPath.getEdgeCount());
+        // System.out.println("optimal: " + optimalPath.getNodePath());
+        // System.out.println("greedy: " + greedyPath.getNodePath());
+        // System.out.println("random: "+  randomPath.getNodePath());
+        // System.out.println();
+
+        int maxFlows = 100;
+        int processedFlows = 0;
+
+        for (Flow flow : flows) {
+
+            org.graphstream.graph.Path greedyPath =
+                    findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+
+            org.graphstream.graph.Path randomPath =
+                    findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
+
+            org.graphstream.graph.Path optimalPath =
+                    findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+
+            System.out.println("=================================================");
+            System.out.println("Flow: " + flow.getId());
+            System.out.println("Start Node: " + flow.getNode());
+            System.out.println("Packets: " + flow.getPakets());
+
+            System.out.print("Policies:");
+            for (PolicyType policy : flow.getFlowPolicy()) {
+                System.out.print(" | " + policy.name());
+            }
+            System.out.println("\n");
+
+            System.out.println("Greedy Path (" + greedyPath.getEdgeCount() + " hops)");
+            System.out.println(greedyPath.getNodePath());
+            System.out.println();
+
+            System.out.println("Random Path (" + randomPath.getEdgeCount() + " hops)");
+            System.out.println(randomPath.getNodePath());
+            System.out.println();
+
+            System.out.println("Optimal Path (" + optimalPath.getEdgeCount() + " hops)");
+            System.out.println(optimalPath.getNodePath());
+            System.out.println();
+
+            // Count packets for the greedy path
+            // for (Node node : greedyPath.getNodePath()) {
+            //     String nodeId = node.getId();
+
+            //     if (nodeId.startsWith(PolicyType.FW.name())) {
+            //         FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+            //         IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.TM.name())) {
+            //         TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.WP.name())) {
+            //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+            //     }
+            // }
+            // Count packets for the rand path
+
+            for (Node node : randomPath.getNodePath()) {
+                String nodeId = node.getId();
+
+                if (nodeId.startsWith(PolicyType.FW.name())) {
+                    FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
+                } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+                    IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
+                } else if (nodeId.startsWith(PolicyType.TM.name())) {
+                    TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
+                } else if (nodeId.startsWith(PolicyType.WP.name())) {
+                    WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+                }
+            }
+            // Count packets for the optimal path
+
+            // for (Node node : optimalPath.getNodePath()) {
+            //     String nodeId = node.getId();
+
+            //     if (nodeId.startsWith(PolicyType.FW.name())) {
+            //         FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+            //         IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.TM.name())) {
+            //         TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.WP.name())) {
+            //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+            //     }
+            // }
+
+            processedFlows++;
+            if (processedFlows >= maxFlows) {
+                break;
+            }
+        }
+        
+    
+    FWpackest.forEach((key, value) -> {
+        System.out.print(" | "+key + " pakects enter: " + value);
+    });
+    System.err.println();
+    System.err.println();
+
+    IDSpackest.forEach((key, value) -> {
+        System.out.print(" | "+key + " pakects enter: " + value);
+    });
+    System.err.println();
+    System.err.println();
+
+    TMpackest.forEach((key, value) -> {
+        System.out.print(" | "+key + " pakects enter: " + value);
+    });
+    System.err.println();
+    System.err.println();
+
+    WPpackest.forEach((key, value) -> {
+        System.out.print(" | "+key + " pakects enter: " + value);
+    });
         graph.display().enableAutoLayout();
     }
 
