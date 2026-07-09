@@ -133,24 +133,17 @@ public class App2 {
 
         return null;
     }
-private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, int maxHops) {
-    if (source == null || graph == null) {
-        return null;
-    }
+    private static Node findClosestMB(PolicyType mbType, Node source, int maxHops) {
+        if (source == null) {
+            return null;
+        }
 
-    Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, null);
-
-    try {
-        dijkstra.init(graph);
-        dijkstra.setSource(source);
-        dijkstra.compute();
+        Dijkstra dijkstra = dijkstraCache.get(source);
 
         Node closestNode = null;
-        double shortestDistance = 10000;
-        for (Node candidate : graph) {
+        double shortestDistance = Double.POSITIVE_INFINITY;
 
-            if (!candidate.getId().startsWith(mbType.name()))
-                continue;
+        for (Node candidate : getListForType(mbType)) {
 
             if (candidate.equals(source))
                 continue;
@@ -166,94 +159,57 @@ private static Node findClosestMB(PolicyType mbType, Node source, Graph graph, i
             if (distance < shortestDistance) {
                 shortestDistance = distance;
                 closestNode = candidate;
-            }
-            if (distance == shortestDistance) {
-                Random rand = new Random();
-                boolean randomBool = rand.nextBoolean();
-                if(randomBool){
-                    shortestDistance = distance;
-                    closestNode = candidate;
-                }
+            } else if (distance == shortestDistance && ThreadLocalRandom.current().nextBoolean()) {
+                closestNode = candidate;
             }
         }
 
         return closestNode;
     }
-    finally {
-        dijkstra.clear();
-    }
-}
-private static HashMap<String, Double> findClosestMBList(PolicyType mbType, Node source, Graph graph, int maxHops) {
-    if (source == null || graph == null) {
-        return null;
-    }
-    HashMap<String, Double> testin = new HashMap<String, Double>();
-    Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, null);
+    private static HashMap<Node, Dijkstra> dijkstraCache = new HashMap<>(); 
 
-    try {
-        dijkstra.init(graph);
-        dijkstra.setSource(source);
-        dijkstra.compute();
+    private static HashMap<String, Double> findClosestMBList(
+            PolicyType mbType, Node source, int maxHops) {
 
-        Node closestNode = null;
-        double shortestDistance = 10000;
+        if (source == null)
+            return null;
 
-        for (Node candidate : graph) {
+        HashMap<String, Double> distances = new HashMap<>();
 
-            if (!candidate.getId().startsWith(mbType.name()))
-                continue;
+        Dijkstra dijkstra = dijkstraCache.get(source);
 
-            if (candidate.equals(source))
-                continue;
-
+        for (Node candidate : getListForType(mbType)) {
             double distance = dijkstra.getPathLength(candidate);
 
-            
             if (Double.isInfinite(distance))
                 continue;
-
-            testin.put(candidate.getId(), distance);
 
             if (distance > maxHops)
                 continue;
 
-            if (distance < shortestDistance) {
-                shortestDistance = distance;
-                closestNode = candidate;
-            }
+            distances.put(candidate.getId(), distance);
         }
 
-        return testin;
+        return distances;
     }
-    finally {
-        dijkstra.clear();
-    }
-}
-private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, Node source, Graph graph, int maxHops) {
-    if (source == null || graph == null) {
-        return null;
-    }
-    Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, null);
+    private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, Node source, int maxHops) {
 
-    try {
-        dijkstra.init(graph);
-        dijkstra.setSource(source);
-        dijkstra.compute();
+        if (source == null) {
+            return null;
+        }
+
+        Dijkstra dijkstra = dijkstraCache.get(source);
 
         Node closestNode = null;
-        double shortestDistance = 10000;
+        double shortestDistance = Double.POSITIVE_INFINITY;
 
-        for (Node candidate : graph) {
-
-            if (!candidate.getId().startsWith(mbType.name()))
-                continue;
+        for (Node candidate : getListForType(mbType)) {
 
             if (candidate.equals(source))
                 continue;
 
             double distance = dijkstra.getPathLength(candidate);
 
-            
             if (Double.isInfinite(distance))
                 continue;
 
@@ -263,23 +219,18 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             if (distance < shortestDistance) {
                 shortestDistance = distance;
                 closestNode = candidate;
+            } else if (distance == shortestDistance && ThreadLocalRandom.current().nextBoolean()) {
+                closestNode = candidate;
             }
         }
+
+        if (closestNode == null)
+            return null;
 
         return dijkstra.getPath(closestNode);
     }
-    finally {
-        dijkstra.clear();
-    }
-}
     private static org.graphstream.graph.Path findClosestPathToNode(Node source, Node destination, Graph graph){
-        Dijkstra dijkstra = new Dijkstra(Dijkstra.Element.EDGE, null, null);
-
-        dijkstra.init(graph);
-        dijkstra.setSource(source);
-        dijkstra.compute();
-
-        return dijkstra.getPath(destination);
+        return dijkstraCache.get(source).getPath(destination);
     }
     private static Node findClosestMBRandom(PolicyType MBName){
         List<Node> list;
@@ -310,7 +261,7 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
         Node currentNode = startNode;
 
         for (PolicyType type : middleBoxTypes) {
-            Node nearest = findClosestMB(type, currentNode, graph, maxHops);
+            Node nearest = findClosestMB(type, currentNode, maxHops);
             if (nearest == null) {
                 System.err.println("No reachable " + type + " from " + currentNode.getId());
                 return null;
@@ -335,7 +286,7 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
 
             for (Node from : currentLayer) {
                 double baseDist = bestDistance.get(from);
-                HashMap<String, Double> distances = findClosestMBList(type, from, graph, maxHops);
+                HashMap<String, Double> distances = findClosestMBList(type, from, maxHops);
                 if (distances == null) continue;
 
                 for (Node candidate : candidates) {
@@ -767,6 +718,13 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             "node { fill-color: #4A90D9; size: 15px; text-size: 13; text-color: Black; text-style: bold; }" +
             "edge { fill-color: #000000; size: 2px; }"
         );
+        for (Node node : graph) {
+            Dijkstra d = new Dijkstra(Dijkstra.Element.EDGE, null, null);
+            d.init(graph);
+            d.setSource(node);
+            d.compute();
+            dijkstraCache.put(node, d);
+        }
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("FW0"),graph,100).getId());
         // System.out.println("found:"+findClosestMB(PolicyType.WP,graph.getNode("IDS0"),graph,100).getId());
 
@@ -795,10 +753,10 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             if (name.startsWith(PolicyType.FW.name()) || name.startsWith(PolicyType.IDS.name())
                     || name.startsWith(PolicyType.TM.name()) || name.startsWith(PolicyType.WP.name()))
                 continue;
-            Node fw  = findClosestMB(PolicyType.FW,  graph.getNode(name), graph, 100);
-            Node ids = findClosestMB(PolicyType.IDS, graph.getNode(name), graph, 100);
-            Node tm  = findClosestMB(PolicyType.TM,  graph.getNode(name), graph, 100);
-            Node wp  = findClosestMB(PolicyType.WP,  graph.getNode(name), graph, 100);
+            Node fw  = findClosestMB(PolicyType.FW,  graph.getNode(name), 100);
+            Node ids = findClosestMB(PolicyType.IDS, graph.getNode(name), 100);
+            Node tm  = findClosestMB(PolicyType.TM,  graph.getNode(name), 100);
+            Node wp  = findClosestMB(PolicyType.WP,  graph.getNode(name), 100);
             routingTable.put(graph.getNode(name), null);
 
             // System.out.println(name + ": "
@@ -806,10 +764,10 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             //     + " " + (ids != null ? ids.getId() : "none")
             //     + " " + (tm  != null ? tm.getId()  : "none")
             //     + " " + (wp  != null ? wp.getId()  : "none"));
-            HashMap<String, Double> fwL  = findClosestMBList(PolicyType.FW,  graph.getNode(name), graph, 100);
-            HashMap<String, Double> idsL = findClosestMBList(PolicyType.IDS, graph.getNode(name), graph, 100);
-            HashMap<String, Double> tmL  = findClosestMBList(PolicyType.TM,  graph.getNode(name), graph, 100);
-            HashMap<String, Double> wpL  = findClosestMBList(PolicyType.WP,  graph.getNode(name), graph, 100);
+            HashMap<String, Double> fwL  = findClosestMBList(PolicyType.FW,  graph.getNode(name), 100);
+            HashMap<String, Double> idsL = findClosestMBList(PolicyType.IDS, graph.getNode(name), 100);
+            HashMap<String, Double> tmL  = findClosestMBList(PolicyType.TM,  graph.getNode(name), 100);
+            HashMap<String, Double> wpL  = findClosestMBList(PolicyType.WP,  graph.getNode(name), 100);
 
             
             // fwL.forEach((key, value) -> {
@@ -885,7 +843,7 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
         // System.out.println("random: "+  randomPath.getNodePath());
         // System.out.println();
 
-        int maxFlows = 100;
+        int maxFlows = 1000000;
         int processedFlows = 0;
 
         for (Flow flow : flows) {
@@ -893,52 +851,37 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             org.graphstream.graph.Path greedyPath =
                     findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
-            org.graphstream.graph.Path randomPath =
-                    findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
+            // org.graphstream.graph.Path randomPath =
+            //         findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
 
-            org.graphstream.graph.Path optimalPath =
-                    findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+            // org.graphstream.graph.Path optimalPath =
+            //         findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
-            System.out.println("=================================================");
-            System.out.println("Flow: " + flow.getId());
-            System.out.println("Start Node: " + flow.getNode());
-            System.out.println("Packets: " + flow.getPakets());
+            // System.out.println("=================================================");
+            // System.out.println("Flow: " + flow.getId());
+            // System.out.println("Start Node: " + flow.getNode());
+            // System.out.println("Packets: " + flow.getPakets());
 
-            System.out.print("Policies:");
-            for (PolicyType policy : flow.getFlowPolicy()) {
-                System.out.print(" | " + policy.name());
-            }
-            System.out.println("\n");
+            // System.out.print("Policies:");
+            // for (PolicyType policy : flow.getFlowPolicy()) {
+            //     System.out.print(" | " + policy.name());
+            // }
+            // System.out.println("\n");
 
-            System.out.println("Greedy Path (" + greedyPath.getEdgeCount() + " hops)");
-            System.out.println(greedyPath.getNodePath());
-            System.out.println();
+            // System.out.println("Greedy Path (" + greedyPath.getEdgeCount() + " hops)");
+            // System.out.println(greedyPath.getNodePath());
+            // System.out.println();
 
-            System.out.println("Random Path (" + randomPath.getEdgeCount() + " hops)");
-            System.out.println(randomPath.getNodePath());
-            System.out.println();
+            // System.out.println("Random Path (" + randomPath.getEdgeCount() + " hops)");
+            // System.out.println(randomPath.getNodePath());
+            // System.out.println();
 
-            System.out.println("Optimal Path (" + optimalPath.getEdgeCount() + " hops)");
-            System.out.println(optimalPath.getNodePath());
-            System.out.println();
+            // System.out.println("Optimal Path (" + optimalPath.getEdgeCount() + " hops)");
+            // System.out.println(optimalPath.getNodePath());
+            // System.out.println();
 
             // Count packets for the greedy path
-            // for (Node node : greedyPath.getNodePath()) {
-            //     String nodeId = node.getId();
-
-            //     if (nodeId.startsWith(PolicyType.FW.name())) {
-            //         FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.IDS.name())) {
-            //         IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.TM.name())) {
-            //         TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.WP.name())) {
-            //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
-            //     }
-            // }
-            // Count packets for the rand path
-
-            for (Node node : randomPath.getNodePath()) {
+            for (Node node : greedyPath.getNodePath()) {
                 String nodeId = node.getId();
 
                 if (nodeId.startsWith(PolicyType.FW.name())) {
@@ -951,6 +894,21 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
                     WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
                 }
             }
+            // Count packets for the rand path
+
+            // for (Node node : randomPath.getNodePath()) {
+            //     String nodeId = node.getId();
+
+            //     if (nodeId.startsWith(PolicyType.FW.name())) {
+            //         FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+            //         IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.TM.name())) {
+            //         TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
+            //     } else if (nodeId.startsWith(PolicyType.WP.name())) {
+            //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+            //     }
+            // }
             // Count packets for the optimal path
 
             // for (Node node : optimalPath.getNodePath()) {
@@ -966,11 +924,35 @@ private static org.graphstream.graph.Path findClosestMBPath(PolicyType mbType, N
             //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
             //     }
             // }
+            double percentComplete = (processedFlows * 100.0) / 380000;
 
+            if (percentComplete >= 100) {
+                System.out.println("100% finished");
+            } else if (percentComplete == 90) {
+                System.out.println("90% finished");
+            } else if (percentComplete == 80) {
+                System.out.println("80% finished");
+            } else if (percentComplete == 70) {
+                System.out.println("70% finished");
+            } else if (percentComplete == 60) {
+                System.out.println("60% finished");
+            } else if (percentComplete == 50) {
+                System.out.println("50% finished");
+            } else if (percentComplete == 40) {
+                System.out.println("40% finished");
+            } else if (percentComplete == 30) {
+                System.out.println("30% finished");
+            } else if (percentComplete == 20) {
+                System.out.println("20% finished");
+            } else if (percentComplete == 10) {
+                System.out.println("10% finished");
+            }
             processedFlows++;
             if (processedFlows >= maxFlows) {
                 break;
             }
+
+
         }
         
     
