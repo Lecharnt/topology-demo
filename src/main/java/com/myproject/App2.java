@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.Collections;
+import java.util.Arrays;
 
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
@@ -235,10 +236,10 @@ public class App2 {
     private static Node findClosestMBRandom(PolicyType MBName){
         List<Node> list;
         switch (MBName) {
-            case FW:  list = FWList;  break;
-            case IDS: list = IDSList; break;
-            case WP:  list = WPList;  break;
-            case TM:  list = TMList;  break;
+            case FW:  list = FWListR;  break;
+            case IDS: list = IDSListR; break;
+            case WP:  list = WPListR;  break;
+            case TM:  list = TMListR;  break;
             default:  return null;
         }
         if (list.isEmpty()) {
@@ -469,6 +470,10 @@ public class App2 {
     private static List<Node> WPList = new ArrayList<>();
     private static List<Node> TMList = new ArrayList<>();
 
+    private static List<Node> FWListR = new ArrayList<>();
+    private static List<Node> IDSListR = new ArrayList<>();
+    private static List<Node> WPListR = new ArrayList<>();
+    private static List<Node> TMListR = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
         System.out.println("THIS IS APP2 RUNNING");
@@ -548,6 +553,18 @@ public class App2 {
             else
                 System.err.println("something whent wrong" + node.getId());
         }
+        int FWListRandAmount = 4;
+        FWListR = FWList.subList(0, FWListRandAmount);
+
+        int IDSListRandAmount = 4;
+        IDSListR = IDSList.subList(0, IDSListRandAmount);
+
+        int WPListRandAmount = 2;
+        WPListR = WPList.subList(0, WPListRandAmount);
+
+        int TMListRandAmount = 2;
+        TMListR = TMList.subList(0, TMListRandAmount);
+
         List<EdgeRouter> FakeEdgeRouters = new ArrayList<EdgeRouter>();
         
 
@@ -804,52 +821,54 @@ public class App2 {
     allTypes.add(PolicyType.TM);
 
     Random testRand = new Random();
+    List<Simulation> Simulations = new ArrayList<>();
+int numSimulations = 5;
+int maxFlows = 1000000;
+
+for (int simRun = 0; simRun < numSimulations; simRun++) {
+
+    // fresh packet counters for this run
     HashMap<String, Integer> FWpackest = new HashMap<>();
-    for (Node iterable_element : FWList) {
-        FWpackest.put(iterable_element.getId(), 0);
-    }
+    for (Node n : FWList) FWpackest.put(n.getId(), 0);
 
     HashMap<String, Integer> IDSpackest = new HashMap<>();
+    for (Node n : IDSList) IDSpackest.put(n.getId(), 0);
 
-    for (Node iterable_element : IDSList) {
-        IDSpackest.put(iterable_element.getId(), 0);
-        
-    }
     HashMap<String, Integer> TMpackest = new HashMap<>();
+    for (Node n : TMList) TMpackest.put(n.getId(), 0);
 
-    for (Node iterable_element : TMList) {
-        TMpackest.put(iterable_element.getId(), 0);
-        
-    }
     HashMap<String, Integer> WPpackest = new HashMap<>();
+    for (Node n : WPList) WPpackest.put(n.getId(), 0);
 
+<<<<<<< HEAD
     for (Node iterable_element : WPList) {
         WPpackest.put(iterable_element.getId(), 0);
         
     }
+
     // for (int i = 0; i < 10; i++) {
         List<PolicyType> mbOrder = new ArrayList<>(allTypes);
         Collections.shuffle(mbOrder, testRand);
+=======
+    List<PolicyType> mbOrder = new ArrayList<>(allTypes);
+    Collections.shuffle(mbOrder, testRand);
+>>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
 
-        Node startNode = ERList.get(testRand.nextInt(ERList.size()));
+    int processedFlows = 0;
 
-        // org.graphstream.graph.Path greedyPath = findGreedyPathThroughMBs(startNode, mbOrder, graph, 1000);
-        // org.graphstream.graph.Path optimalPath = findOptimalPathThroughMBs(startNode, mbOrder, graph, 1000);
-        // org.graphstream.graph.Path randomPath = findRandomPathThroughMBs(startNode, mbOrder, graph);
+    for (Flow flow : flows) {
 
-        // System.out.println(startNode.getId() + " " + mbOrder  + " optimal: " + optimalPath.getEdgeCount()+ " greedy: " + greedyPath.getEdgeCount() + " random: " + randomPath.getEdgeCount());
-        // System.out.println("optimal: " + optimalPath.getNodePath());
-        // System.out.println("greedy: " + greedyPath.getNodePath());
-        // System.out.println("random: "+  randomPath.getNodePath());
-        // System.out.println();
+        org.graphstream.graph.Path greedyPath =
+                findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
-        int maxFlows = 1000000;
-        int processedFlows = 0;
+        for (Node node : greedyPath.getNodePath()) {
+            String nodeId = node.getId();
 
+<<<<<<< HEAD
         for (Flow flow : flows) {
 
             org.graphstream.graph.Path greedyPath =
-                    findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+                    findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
 
             // org.graphstream.graph.Path randomPath =
             //         findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
@@ -893,90 +912,60 @@ public class App2 {
                 } else if (nodeId.startsWith(PolicyType.WP.name())) {
                     WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
                 }
+=======
+            if (nodeId.startsWith(PolicyType.FW.name())) {
+                FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
+            } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+                IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
+            } else if (nodeId.startsWith(PolicyType.TM.name())) {
+                TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
+            } else if (nodeId.startsWith(PolicyType.WP.name())) {
+                WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+>>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
             }
-            // Count packets for the rand path
-
-            // for (Node node : randomPath.getNodePath()) {
-            //     String nodeId = node.getId();
-
-            //     if (nodeId.startsWith(PolicyType.FW.name())) {
-            //         FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.IDS.name())) {
-            //         IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.TM.name())) {
-            //         TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.WP.name())) {
-            //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
-            //     }
-            // }
-            // Count packets for the optimal path
-
-            // for (Node node : optimalPath.getNodePath()) {
-            //     String nodeId = node.getId();
-
-            //     if (nodeId.startsWith(PolicyType.FW.name())) {
-            //         FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.IDS.name())) {
-            //         IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.TM.name())) {
-            //         TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
-            //     } else if (nodeId.startsWith(PolicyType.WP.name())) {
-            //         WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
-            //     }
-            // }
-            double percentComplete = (processedFlows * 100.0) / 380000;
-
-            if (percentComplete >= 100) {
-                System.out.println("100% finished");
-            } else if (percentComplete == 90) {
-                System.out.println("90% finished");
-            } else if (percentComplete == 80) {
-                System.out.println("80% finished");
-            } else if (percentComplete == 70) {
-                System.out.println("70% finished");
-            } else if (percentComplete == 60) {
-                System.out.println("60% finished");
-            } else if (percentComplete == 50) {
-                System.out.println("50% finished");
-            } else if (percentComplete == 40) {
-                System.out.println("40% finished");
-            } else if (percentComplete == 30) {
-                System.out.println("30% finished");
-            } else if (percentComplete == 20) {
-                System.out.println("20% finished");
-            } else if (percentComplete == 10) {
-                System.out.println("10% finished");
-            }
-            processedFlows++;
-            if (processedFlows >= maxFlows) {
-                break;
-            }
-
-
         }
-        
-    
-    FWpackest.forEach((key, value) -> {
-        System.out.print(" | "+key + " pakects enter: " + value);
-    });
-    System.err.println();
-    System.err.println();
 
-    IDSpackest.forEach((key, value) -> {
-        System.out.print(" | "+key + " pakects enter: " + value);
-    });
-    System.err.println();
-    System.err.println();
+        processedFlows++;
+        if (processedFlows >= maxFlows) {
+            break;
+        }
+    }
 
-    TMpackest.forEach((key, value) -> {
-        System.out.print(" | "+key + " pakects enter: " + value);
-    });
-    System.err.println();
-    System.err.println();
+    // store this run's results
+    Simulation simResult = new Simulation(FWpackest, IDSpackest, TMpackest, WPpackest);
+    Simulations.add(simResult);
 
-    WPpackest.forEach((key, value) -> {
-        System.out.print(" | "+key + " pakects enter: " + value);
-    });
+    System.out.println("Simulation run " + (simRun + 1) + " of " + numSimulations);
+
+    FWpackest.forEach((key, value) -> System.out.print(" | " + key + " packets enter: " + value));
+    System.out.println();
+
+    IDSpackest.forEach((key, value) -> System.out.print(" | " + key + " packets enter: " + value));
+    System.out.println();
+
+    TMpackest.forEach((key, value) -> System.out.print(" | " + key + " packets enter: " + value));
+    System.out.println();
+
+    WPpackest.forEach((key, value) -> System.out.print(" | " + key + " packets enter: " + value));
+    System.out.println();
+    System.out.println();
+    int fwMin = Collections.min(FWpackest.values());
+    int fwMax = Collections.max(FWpackest.values());
+    int idsMin = Collections.min(IDSpackest.values());
+    int idsMax = Collections.max(IDSpackest.values());
+    int tmMin = Collections.min(TMpackest.values());
+    int tmMax = Collections.max(TMpackest.values());
+    int wpMin = Collections.min(WPpackest.values());
+    int wpMax = Collections.max(WPpackest.values());
+
+    System.out.println("FW  Min: " + fwMin + " Max: " + fwMax);
+    System.out.println("IDS Min: " + idsMin + " Max: " + idsMax);
+    System.out.println("TM  Min: " + tmMin + " Max: " + tmMax);
+    System.out.println("WP  Min: " + wpMin + " Max: " + wpMax);
+
+    System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
+    System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
+}
         graph.display().enableAutoLayout();
     }
 
