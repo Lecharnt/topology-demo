@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 com/myproject/EdgeRouter.class
 com/myproject/Flow.class
 com/myproject/EnforcementPath.class
@@ -12,7 +11,6 @@ com/myproject/App.class
 com/myproject/App3$1.class
 com/myproject/App2$RouterType.class
 com/myproject/App2$RoutingTable.class
-=======
 com\myproject\App2$RouterType.class
 com\myproject\App2$RoutingTable.class
 com\myproject\App2.class
@@ -25,4 +23,7 @@ com\myproject\App2$1.class
 com\myproject\App$PolicyType.class
 com\myproject\App.class
 com\myproject\Simulation.class
+<<<<<<< HEAD
+>>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
+=======
 >>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b

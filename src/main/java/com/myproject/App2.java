@@ -840,15 +840,8 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
     HashMap<String, Integer> WPpackest = new HashMap<>();
     for (Node n : WPList) WPpackest.put(n.getId(), 0);
 
-<<<<<<< HEAD
-    for (Node iterable_element : WPList) {
-        WPpackest.put(iterable_element.getId(), 0);
-        
-    }
-
-    // for (int i = 0; i < 10; i++) {
-        List<PolicyType> mbOrder = new ArrayList<>(allTypes);
-        Collections.shuffle(mbOrder, testRand);
+    List<PolicyType> mbOrder = new ArrayList<>(allTypes);
+    Collections.shuffle(mbOrder, testRand);
 =======
     List<PolicyType> mbOrder = new ArrayList<>(allTypes);
     Collections.shuffle(mbOrder, testRand);
@@ -864,55 +857,9 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
         for (Node node : greedyPath.getNodePath()) {
             String nodeId = node.getId();
 
-<<<<<<< HEAD
-        for (Flow flow : flows) {
+        for (Node node : greedyPath.getNodePath()) {
+            String nodeId = node.getId();
 
-            org.graphstream.graph.Path greedyPath =
-                    findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
-
-            // org.graphstream.graph.Path randomPath =
-            //         findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
-
-            // org.graphstream.graph.Path optimalPath =
-            //         findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
-
-            // System.out.println("=================================================");
-            // System.out.println("Flow: " + flow.getId());
-            // System.out.println("Start Node: " + flow.getNode());
-            // System.out.println("Packets: " + flow.getPakets());
-
-            // System.out.print("Policies:");
-            // for (PolicyType policy : flow.getFlowPolicy()) {
-            //     System.out.print(" | " + policy.name());
-            // }
-            // System.out.println("\n");
-
-            // System.out.println("Greedy Path (" + greedyPath.getEdgeCount() + " hops)");
-            // System.out.println(greedyPath.getNodePath());
-            // System.out.println();
-
-            // System.out.println("Random Path (" + randomPath.getEdgeCount() + " hops)");
-            // System.out.println(randomPath.getNodePath());
-            // System.out.println();
-
-            // System.out.println("Optimal Path (" + optimalPath.getEdgeCount() + " hops)");
-            // System.out.println(optimalPath.getNodePath());
-            // System.out.println();
-
-            // Count packets for the greedy path
-            for (Node node : greedyPath.getNodePath()) {
-                String nodeId = node.getId();
-
-                if (nodeId.startsWith(PolicyType.FW.name())) {
-                    FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
-                } else if (nodeId.startsWith(PolicyType.IDS.name())) {
-                    IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
-                } else if (nodeId.startsWith(PolicyType.TM.name())) {
-                    TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
-                } else if (nodeId.startsWith(PolicyType.WP.name())) {
-                    WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
-                }
-=======
             if (nodeId.startsWith(PolicyType.FW.name())) {
                 FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
             } else if (nodeId.startsWith(PolicyType.IDS.name())) {
@@ -921,6 +868,17 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
                 TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
             } else if (nodeId.startsWith(PolicyType.WP.name())) {
                 WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+            if (nodeId.startsWith(PolicyType.FW.name())) {
+                FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
+            } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+                IDSpackest.replace(nodeId, IDSpackest.get(nodeId) + flow.getPakets());
+            } else if (nodeId.startsWith(PolicyType.TM.name())) {
+                TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
+            } else if (nodeId.startsWith(PolicyType.WP.name())) {
+                WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
+<<<<<<< HEAD
+>>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
+=======
 >>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
             }
         }
