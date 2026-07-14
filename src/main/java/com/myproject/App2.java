@@ -842,10 +842,6 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
 
     List<PolicyType> mbOrder = new ArrayList<>(allTypes);
     Collections.shuffle(mbOrder, testRand);
-=======
-    List<PolicyType> mbOrder = new ArrayList<>(allTypes);
-    Collections.shuffle(mbOrder, testRand);
->>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
 
     int processedFlows = 0;
 
@@ -857,9 +853,6 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
         for (Node node : greedyPath.getNodePath()) {
             String nodeId = node.getId();
 
-        for (Node node : greedyPath.getNodePath()) {
-            String nodeId = node.getId();
-
             if (nodeId.startsWith(PolicyType.FW.name())) {
                 FWpackest.replace(nodeId, FWpackest.get(nodeId) + flow.getPakets());
             } else if (nodeId.startsWith(PolicyType.IDS.name())) {
@@ -876,10 +869,6 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
                 TMpackest.replace(nodeId, TMpackest.get(nodeId) + flow.getPakets());
             } else if (nodeId.startsWith(PolicyType.WP.name())) {
                 WPpackest.replace(nodeId, WPpackest.get(nodeId) + flow.getPakets());
-<<<<<<< HEAD
->>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
-=======
->>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
             }
         }
 
@@ -925,6 +914,6 @@ for (int simRun = 0; simRun < numSimulations; simRun++) {
     System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
 }
         graph.display().enableAutoLayout();
-    }
+    }}
 
 }
