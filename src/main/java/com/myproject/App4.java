@@ -18,7 +18,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class App3 {
+
+
+public class App4 {
 
     // shared state used across the section methods below
     private static Graph graph;
@@ -42,21 +44,102 @@ public class App3 {
     private static HashMap<String, Integer> WPpackestRand = new HashMap<>();
 
 
+    private static int totRuns = 3;
+
+    private static int totmaxFWSingle;
+    private static int totmaxIDSSingle;
+    private static int totmaxTMSingle;
+    private static int totmaxWPSingle;
+
+    private static int totmaxFWRand;
+    private static int totmaxIDSRand;
+    private static int totmaxTMRand;
+    private static int totmaxWPRand;
+
+
+
+    private static int totMinFWSingle;
+    private static int totMinIDSSingle;
+    private static int totMinTMSingle;
+    private static int totMinWPSingle;
+
+    private static int totMinFWRand;
+    private static int totMinIDSRand;
+    private static int totMinTMRand;
+    private static int totMinWPRand;
+
+    private static int totOverallMaxSingle;
+    private static int totOverallMinSingle;
+
+    private static int totOverallMaxRand;
+    private static int totOverallMinRand;
+
 
 
     public static void main(String[] args) throws IOException {
-        setupConfig();
-        buildGraph();
-        sortNodesIntoLists();
-        buildFlowsAndEdgeRouters();
-        reportEdgeRouterStats();
-        wireTopologyEdges();
-        styleGraphAndBuildDijkstraCache();
-        computeRoutingTables();
-        simulateFlowsAndTallyPackets();
-        printResultsAndDisplay();
+        for (int index = 0; index < totRuns; index++) {
+            clearPublicVars();
+            PathFinder.clearPublicVars();
+            setupConfig();
+            buildGraph();
+            sortNodesIntoLists();
+            buildFlowsAndEdgeRouters();
+            reportEdgeRouterStats();
+            wireTopologyEdges();
+            styleGraphAndBuildDijkstraCache();
+            computeRoutingTables();
+            simulateFlowsAndTallyPackets();
+            printResultsAndDisplay();
+        }
+        System.out.println("Total Max Single FW: " + totmaxFWSingle / totRuns);
+        System.out.println("Total Max Single IDS: " + totmaxIDSSingle / totRuns);
+        System.out.println("Total Max Single TM: " + totmaxTMSingle / totRuns);
+        System.out.println("Total Max Single WP: " + totmaxWPSingle / totRuns);
+
+        System.out.println("Total Min Single FW: " + totMinFWSingle / totRuns);
+        System.out.println("Total Min Single IDS: " + totMinIDSSingle / totRuns);
+        System.out.println("Total Min Single TM: " + totMinTMSingle / totRuns);
+        System.out.println("Total Min Single WP: " + totMinWPSingle / totRuns);
+
+        System.out.println("Total Max Random FW: " + totmaxFWRand / totRuns);
+        System.out.println("Total Max Random IDS: " + totmaxIDSRand / totRuns);
+        System.out.println("Total Max Random TM: " + totmaxTMRand / totRuns);
+        System.out.println("Total Max Random WP: " + totmaxWPRand / totRuns);
+
+        System.out.println("Total Min Random FW: " + totMinFWRand / totRuns);
+        System.out.println("Total Min Random IDS: " + totMinIDSRand / totRuns);
+        System.out.println("Total Min Random TM: " + totMinTMRand / totRuns);
+        System.out.println("Total Min Random WP: " + totMinWPRand / totRuns);
+
+        System.out.println("Overall Max Single: " + totOverallMaxSingle / totRuns);
+        System.out.println("Overall Min Single: " + totOverallMinSingle / totRuns);
+
+        System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
+        System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
     }
 
+    private static void clearPublicVars() {
+        graph = null;
+        rand = null;
+        argsList.clear();
+        FakeEdgeRouters.clear();
+        flows.clear();
+
+        FWpackest.clear();
+        IDSpackest.clear();
+        TMpackest.clear();
+        WPpackest.clear();
+
+        FWpackestGreed.clear();
+        IDSpackestGreed.clear();
+        TMpackestGreed.clear();
+        WPpackestGreed.clear();
+
+        FWpackestRand.clear();
+        IDSpackestRand.clear();
+        TMpackestRand.clear();
+        WPpackestRand.clear();
+    }
     // Config
     private static void setupConfig() {
         System.setProperty("org.graphstream.ui", "swing");
@@ -168,6 +251,7 @@ public class App3 {
         }
 
     }
+
     // Build fake edge routers, load flows from file, assign policies
     private static void buildFlowsAndEdgeRouters() throws IOException {
         for (Node node : PathFinder.ERList) {
@@ -593,23 +677,23 @@ public class App3 {
 
     // Print results and display the graph
     private static void printResultsAndDisplay() {
-        graph.display().enableAutoLayout();
+        //graph.display().enableAutoLayout();
         System.out.println();
 
-        System.err.println("Single middle boxes");
+        // System.err.println("Single middle boxes");
 
-        printMap(FWpackestGreed);
-        printMap(IDSpackestGreed);
-        printMap(TMpackestGreed);
-        printMap(WPpackestGreed);
+        // printMap(FWpackestGreed);
+        // printMap(IDSpackestGreed);
+        // printMap(TMpackestGreed);
+        // printMap(WPpackestGreed);
 
-        System.err.println();
-        System.err.println("Rand middle boxes");
+        // System.err.println();
+        // System.err.println("Rand middle boxes");
 
-        printMap(FWpackestRand);
-        printMap(IDSpackestRand);
-        printMap(TMpackestRand);
-        printMap(WPpackestRand);
+        // printMap(FWpackestRand);
+        // printMap(IDSpackestRand);
+        // printMap(TMpackestRand);
+        // printMap(WPpackestRand);
 
     int fwMin = Collections.min(FWpackestGreed.values());
     int fwMax = Collections.max(FWpackestGreed.values());
@@ -632,6 +716,19 @@ public class App3 {
     System.out.println("Overall Max: " +
         Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
 
+    totOverallMaxSingle = Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
+    totOverallMinSingle = Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
+
+    totMinFWSingle += fwMin;
+    totMinIDSSingle = idsMin;
+    totMinTMSingle += tmMin;
+    totMinWPSingle += wpMin;
+
+    totmaxFWSingle += fwMax;
+    totmaxIDSSingle += idsMax;
+    totmaxTMSingle += tmMax;
+    totmaxWPSingle += wpMax;
+
 
     fwMin = Collections.min(FWpackestRand.values());
     fwMax = Collections.max(FWpackestRand.values());
@@ -648,10 +745,21 @@ public class App3 {
     System.out.println("TM  Min: " + tmMin + " Max: " + tmMax);
     System.out.println("WP  Min: " + wpMin + " Max: " + wpMax);
 
-    System.out.println("Overall Min: " +
-        Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
-    System.out.println("Overall Max: " +
-        Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
+    System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
+    System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
+
+    totMinFWRand += fwMin;
+    totMinIDSRand = idsMin;
+    totMinTMRand += tmMin;
+    totMinWPRand += wpMin;
+
+    totmaxFWRand += fwMax;
+    totmaxIDSRand += idsMax;
+    totmaxTMRand += tmMax;
+    totmaxWPRand += wpMax;
+
+    totOverallMaxRand = Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
+    totOverallMinRand = Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
 }
     private static void printMap(HashMap<String, Integer> map) {
         map.entrySet().stream()

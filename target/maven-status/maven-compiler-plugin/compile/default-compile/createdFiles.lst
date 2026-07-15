@@ -1,13 +1,1 @@
-com/myproject/EdgeRouter.class
-com/myproject/Flow.class
-com/myproject/EnforcementPath.class
-com/myproject/App2$1.class
-com/myproject/App2.class
 com/myproject/PathFinder$1.class
-com/myproject/PolicyType.class
-com/myproject/App$RouterType.class
-com/myproject/App$PolicyType.class
-com/myproject/App$RoutingTable.class
-com/myproject/App.class
-com/myproject/App2$RouterType.class
-com/myproject/App2$RoutingTable.class

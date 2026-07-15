@@ -18,7 +18,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class App3 {
+
+
+public class App5 {
 
     // shared state used across the section methods below
     private static Graph graph;
@@ -168,6 +170,7 @@ public class App3 {
         }
 
     }
+
     // Build fake edge routers, load flows from file, assign policies
     private static void buildFlowsAndEdgeRouters() throws IOException {
         for (Node node : PathFinder.ERList) {
@@ -185,24 +188,27 @@ public class App3 {
             String count = parts[1];
             Integer cool = Integer.parseInt(count);
             int element = RandomUtils.getRandomElemantInList(FakeEdgeRouters);
-
-            Flow currentFlow = new Flow(ip, Integer.parseInt(count), FakeEdgeRouters.get(element).getNode());
-            
+            FakeEdgeRouters.get(element).addFlow(ip, cool);
+            FakeEdgeRouters.get(element).addTotFlow(cool);
             int temp = RandomUtils.getRandomElemant();
+            Flow currentFlow = new Flow(ip, Integer.parseInt(count), FakeEdgeRouters.get(element).getNode());
 
             String policy = "none";
             List<PolicyType> flowPolicy = new ArrayList<PolicyType>();
             switch (temp) {
                 case 1:
+                    policy = "POLICY1";
                     flowPolicy.add(PolicyType.FW);
                     flowPolicy.add(PolicyType.IDS);
                     flowPolicy.add(PolicyType.WP);
                     break;
                 case 2:
+                    policy = "POLICY2";
                     flowPolicy.add(PolicyType.FW);
                     flowPolicy.add(PolicyType.IDS);
                     break;
                 case 3:
+                    policy = "POLICY3";
                     flowPolicy.add(PolicyType.IDS);
                     flowPolicy.add(PolicyType.TM);
                     break;
@@ -211,7 +217,7 @@ public class App3 {
                     break;
             }
             currentFlow.setFlowPolicy(flowPolicy);
-            FakeEdgeRouters.get(element).addFlow(ip, currentFlow);
+            FakeEdgeRouters.get(element).addPolics(ip, policy);
             flows.add(currentFlow);
             if(count3333 >= 50){
                 break;
@@ -221,71 +227,55 @@ public class App3 {
 
     // policy
     private static void reportEdgeRouterStats() {
-        int totalFlows = 0;
-        int totalPackets = 0;
-
-        int totalFW = 0;
-        int totalIDS = 0;
-        int totalTM = 0;
-        int totalWP = 0;
-
+        int total = 0;
+        int totPackest = 0;
+        int temp1x = 0;
+        int temp2x = 0;
+        int temp3x = 0;
         for (EdgeRouter edgeRouter : FakeEdgeRouters) {
+            int temp1 = 0;
+            int temp2 = 0;
+            int temp3 = 0;
+            System.out.print("id: "+ edgeRouter.getNode().getId());
+            System.out.print(" | id first element: " + edgeRouter.getFlows().keySet().iterator().next());
+            System.out.print(" | first element flows: " +  edgeRouter.getFlows().values().iterator().next());
+            System.out.print(" | total pakets: "+ edgeRouter.getTotFlow());
+            System.out.println(" | total flows: "+ edgeRouter.getFlows().size());
 
-            int fw = 0;
-            int ids = 0;
-            int tm = 0;
-            int wp = 0;
+            for (Map.Entry<String, String> entry : edgeRouter.getPolics().entrySet()) {
+                switch (entry.getValue()) {
+                    case "POLICY1":
+                        temp1++;
+                        temp1x++;
 
-            for (Flow flow : edgeRouter.getFlows().values()) {
+                        break;
+                    case "POLICY2":
+                        temp2++;
+                        temp2x++;
 
-                if (flow.getFlowPolicy().contains(PolicyType.FW)) {
-                    fw++;
-                    totalFW++;
+                        break;
+                    case "POLICY3":
+                        temp3++;
+                        temp3x++;
+
+                        break;
+                    default:
+                        break;
                 }
-
-                if (flow.getFlowPolicy().contains(PolicyType.IDS)) {
-                    ids++;
-                    totalIDS++;
-                }
-
-                if (flow.getFlowPolicy().contains(PolicyType.TM)) {
-                    tm++;
-                    totalTM++;
-                }
-
-                if (flow.getFlowPolicy().contains(PolicyType.WP)) {
-                    wp++;
-                    totalWP++;
-                }
-
-                totalPackets += flow.getPakets();
             }
+            totPackest += edgeRouter.getTotFlow();
+            total += edgeRouter.getFlows().size();
 
-            totalFlows += edgeRouter.getFlows().size();
+            // System.out.println("total policy 1: " +temp1 + " | total polcy type2: " +temp2+  " | total policy type 3: "+ temp3);
+            // System.out.println("tot policy: " + edgeRouter.getPolics().size());
 
-            /*
-            System.out.println(
-                edgeRouter.getNode().getId() +
-                " | Flows: " + edgeRouter.getFlows().size() +
-                " | FW: " + fw +
-                " | IDS: " + ids +
-                " | TM: " + tm +
-                " | WP: " + wp
-            );
-            */
+            // System.out.println();
+            // System.out.println();
         }
-
-        // System.out.println("Total flows: " + totalFlows);
-        // System.out.println("Total packets: " + totalPackets);
-
-        // if (totalFlows > 0) {
-        //     System.out.println("Average packets per flow: " + (double) totalPackets / totalFlows);
-        // }
-
-        // System.out.println("FW flows : " + totalFW);
-        // System.out.println("IDS flows: " + totalIDS);
-        // System.out.println("TM flows : " + totalTM);
-        // System.out.println("WP flows : " + totalWP);
+        // System.out.println("total flows in network: "+total);
+        // System.out.println("total packets in network: "+totPackest);
+        // System.out.println("avrage packets in network: "+totPackest/total);
+        // System.out.println("total policy type1 in netwok: " +temp1x + " | total polcy type2: " +temp2x+  " | total policy type 3: "+ temp3x);
     }
 
     // Wire up the topology edges

@@ -26,8 +26,29 @@ class PathFinder {
     static List<Node> WPListR = new ArrayList<>();
     static List<Node> TMListR = new ArrayList<>();
 
+    static HashMap<String, PacketContainer> NodePackestRand = new HashMap<>();
+
+
     static HashMap<Node, Dijkstra> dijkstraCache = new HashMap<>();
 
+    public static void clearPublicVars() {
+        ERList.clear();
+        CRList.clear();
+        MList.clear();
+
+        FWList.clear();
+        IDSList.clear();
+        WPList.clear();
+        TMList.clear();
+
+        FWListR.clear();
+        IDSListR.clear();
+        WPListR.clear();
+        TMListR.clear();
+        
+        NodePackestRand.clear();
+        dijkstraCache.clear();
+    }
     static Node findNextClosestMB(Node coreNode, PolicyType mbName) {
         if (coreNode == null)
             return null;
@@ -150,13 +171,15 @@ class PathFinder {
     static org.graphstream.graph.Path findClosestPathToNode(Node source, Node destination, Graph graph){
         return dijkstraCache.get(source).getPath(destination);
     }
-    static Node findClosestMBRandom(PolicyType MBName){
+    static Node findClosestMBRandom(Node node, PolicyType MBName){
         List<Node> list;
+        
+
         switch (MBName) {
-            case FW:  list = FWListR;  break;
-            case IDS: list = IDSListR; break;
-            case WP:  list = WPListR;  break;
-            case TM:  list = TMListR;  break;
+            case FW:  list = NodePackestRand.get(node.getId()).FWListR; break;
+            case IDS: list = NodePackestRand.get(node.getId()).IDSListR; break;
+            case WP:  list = NodePackestRand.get(node.getId()).WPListR;  break;
+            case TM:  list = NodePackestRand.get(node.getId()).TMListR;  break;
             default:  return null;
         }
         if (list.isEmpty()) {
@@ -272,7 +295,7 @@ class PathFinder {
         Node currentNode = startNode;
 
         for (PolicyType type : middleBoxTypes) {
-            Node randomMB = findClosestMBRandom(type);
+            Node randomMB = findClosestMBRandom(startNode, type);
             if (randomMB == null) {
                 System.err.println("No " + type + " available");
                 return null;
