@@ -11,3 +11,8 @@ enum RouterType{
     CR,
     M
 }
+enum PathType {
+    FW_IDS_WP,
+    FW_IDS,
+    IDS_TM
+}

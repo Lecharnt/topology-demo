@@ -17,7 +17,7 @@ import org.graphstream.algorithm.Dijkstra;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
+import org.graphstream.graph.Path;
 
 
 public class App4 {
@@ -26,7 +26,7 @@ public class App4 {
     private static Graph graph;
     private static Random rand;
     private static List<Integer> argsList = new ArrayList<Integer>();
-    private static List<EdgeRouter> FakeEdgeRouters = new ArrayList<EdgeRouter>();
+    private static HashMap<String, EdgeRouter> FakeEdgeRouters = new HashMap<>();  
     private static List<Flow> flows = new ArrayList<Flow>();
     private static HashMap<String, Integer> FWpackest = new HashMap<>();
     private static HashMap<String, Integer> IDSpackest = new HashMap<>();
@@ -255,7 +255,7 @@ public class App4 {
     // Build fake edge routers, load flows from file, assign policies
     private static void buildFlowsAndEdgeRouters() throws IOException {
         for (Node node : PathFinder.ERList) {
-            FakeEdgeRouters.add(new EdgeRouter(node));
+            FakeEdgeRouters.put(node.getId(), new EdgeRouter(node));
         }
 
         HashMap<String, RoutingTable> routers = RouterUtils.setRouters(graph);
@@ -268,9 +268,11 @@ public class App4 {
             String ip = parts[0];
             String count = parts[1];
             Integer cool = Integer.parseInt(count);
-            int element = RandomUtils.getRandomElemantInList(FakeEdgeRouters);
+            List<EdgeRouter> routers1 = new ArrayList<>(FakeEdgeRouters.values());
+            EdgeRouter edgeRouter = routers1.get(RandomUtils.getRandomElemantInList(routers1));
 
-            Flow currentFlow = new Flow(ip, Integer.parseInt(count), FakeEdgeRouters.get(element).getNode());
+            Flow currentFlow = new Flow(ip, Integer.parseInt(count), edgeRouter.getNode());
+
             
             int temp = RandomUtils.getRandomElemant();
 
@@ -295,7 +297,7 @@ public class App4 {
                     break;
             }
             currentFlow.setFlowPolicy(flowPolicy);
-            FakeEdgeRouters.get(element).addFlow(ip, currentFlow);
+            edgeRouter.addFlow(ip, currentFlow);
             flows.add(currentFlow);
             if(count3333 >= 50){
                 break;
@@ -313,7 +315,7 @@ public class App4 {
         int totalTM = 0;
         int totalWP = 0;
 
-        for (EdgeRouter edgeRouter : FakeEdgeRouters) {
+        for (EdgeRouter edgeRouter : FakeEdgeRouters.values()) {
 
             int fw = 0;
             int ids = 0;
@@ -584,14 +586,27 @@ public class App4 {
         TMpackestRand = new HashMap<>(TMpackest);
         WPpackestRand = new HashMap<>(WPpackest);
 
+        int howManyFWIDSWP = 32;
+        int howManyFWIDS = 16;
+        int howManyIDSTM = 8;
+
+        for (EdgeRouter edgeRouter : FakeEdgeRouters.values()) {
+            for (int index = 0; index < howManyFWIDSWP; index++) {
+                edgeRouter.addFWIdsWpPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP), graph));
+            }
+            for (int index = 0; index < howManyFWIDS; index++) {
+                edgeRouter.addFwIdsPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.FW, PolicyType.IDS), graph));
+            }
+            for (int index = 0; index < howManyIDSTM; index++) {
+                edgeRouter.addIdsTmPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.IDS, PolicyType.TM), graph));
+            }
+        }
 
         for (Flow flow : flows) {
 
-            org.graphstream.graph.Path greedyPath =
-                    PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+            Path greedyPath = PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
-            org.graphstream.graph.Path randomPath =
-                    PathFinder.findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
+            Path randomPath = FakeEdgeRouters.get(flow.getNode().getId()).getRandomPath(flow.getFlowPolicy());
 
             // org.graphstream.graph.Path optimalPath =
             //         PathFinder.findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
