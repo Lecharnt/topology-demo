@@ -2,68 +2,37 @@ package com.myproject;
 
 import org.graphstream.graph.Node;
 import java.util.HashMap;
-
+import org.graphstream.graph.Path;
 public class EdgeRouter {
 
     private Node node;
-    private HashMap<String, Integer> flows;
-    private HashMap<String, String> flowPolicy;
+    private HashMap<String, Flow> flows;
 
-    private Integer totFlows = 0;
 
     public EdgeRouter(Node node) {
         this.node = node;
         this.flows = new HashMap<>();
-        this.flowPolicy = new HashMap<>();
     }
 
 
     public Integer getTotFlow() {
-        return totFlows;
-    }
-    public void addTotFlow(int amount) {
-        totFlows += amount;
-    }
-    public void setTotFlow(int amount) {
-        totFlows = amount;
+        return flows.size();
     }
 
-
-    public HashMap<String, String> getPolics() {
-        return flowPolicy;
-    }
-
-    public String getPolics(String ip) {
-        return flowPolicy.get(ip);
-    }
-
-    public void setPolics(HashMap<String, String> policy) {
-        this.flowPolicy = policy;
-    }
-
-    public void addPolics(String policy, String ip) {
-        flowPolicy.put(policy, ip);
-    }
-
-    public void removePolics(String ip) {
-        flowPolicy.remove(ip);
-    }
-
-
-    public HashMap<String, Integer> getFlows() {
+    public HashMap<String, Flow> getFlows() {
         return flows;
     }
 
-    public Integer getFlow(String ip) {
+    public Flow getFlow(String ip) {
         return flows.get(ip);
     }
 
-    public void setFlows(HashMap<String, Integer> flows) {
+    public void setFlows(HashMap<String, Flow> flows) {
         this.flows = flows;
     }
 
-    public void addFlow(String ip, Integer num) {
-        flows.put(ip, num);
+    public void addFlow(String ip, Flow flow) {
+        flows.put(ip, flow);
     }
 
     public void removeFlow(String ip) {

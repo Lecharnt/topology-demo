@@ -6,3 +6,8 @@ enum PolicyType {
         WP,
         TM
     }
+enum RouterType{
+    ER,
+    CR,
+    M
+}
