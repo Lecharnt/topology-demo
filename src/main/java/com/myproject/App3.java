@@ -61,7 +61,6 @@ public class App3 {
 
     // Config
     private static void setupConfig() {
-        System.out.println("THIS IS APP2 RUNNING");
         System.setProperty("org.graphstream.ui", "swing");
         System.setProperty("org.graphstream.ui", "swing");
 
