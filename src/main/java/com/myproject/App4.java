@@ -17,7 +17,7 @@ import org.graphstream.algorithm.Dijkstra;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
+import org.graphstream.graph.Path;
 
 
 public class App4 {
@@ -26,7 +26,7 @@ public class App4 {
     private static Graph graph;
     private static Random rand;
     private static List<Integer> argsList = new ArrayList<Integer>();
-    private static List<EdgeRouter> FakeEdgeRouters = new ArrayList<EdgeRouter>();
+    private static HashMap<String, EdgeRouter> FakeEdgeRouters = new HashMap<>();  
     private static List<Flow> flows = new ArrayList<Flow>();
     private static HashMap<String, Integer> FWpackest = new HashMap<>();
     private static HashMap<String, Integer> IDSpackest = new HashMap<>();
@@ -90,26 +90,40 @@ public class App4 {
             computeRoutingTables();
             simulateFlowsAndTallyPackets();
             printResultsAndDisplay();
+            //MathStuff(FWpackestGreed, IDSpackestGreed, TMpackestGreed, WPpackestGreed);
+            // MathStuff(FWpackestRand, IDSpackestRand, TMpackestRand, WPpackestRand);
+
         }
+        System.out.println();
+        System.out.println();
+        System.out.println();
+
         System.out.println("Total Max Single FW: " + totmaxFWSingle / totRuns);
+        System.out.println("Total Min Single FW: " + totMinFWSingle / totRuns);
+
         System.out.println("Total Max Single IDS: " + totmaxIDSSingle / totRuns);
+        System.out.println("Total Min Single IDS: " + totMinIDSSingle / totRuns);
+
         System.out.println("Total Max Single TM: " + totmaxTMSingle / totRuns);
+        System.out.println("Total Min Single TM: " + totMinTMSingle / totRuns);
+
+        System.out.println("Total Min Single WP: " + totMinWPSingle / totRuns);
         System.out.println("Total Max Single WP: " + totmaxWPSingle / totRuns);
 
-        System.out.println("Total Min Single FW: " + totMinFWSingle / totRuns);
-        System.out.println("Total Min Single IDS: " + totMinIDSSingle / totRuns);
-        System.out.println("Total Min Single TM: " + totMinTMSingle / totRuns);
-        System.out.println("Total Min Single WP: " + totMinWPSingle / totRuns);
 
         System.out.println("Total Max Random FW: " + totmaxFWRand / totRuns);
-        System.out.println("Total Max Random IDS: " + totmaxIDSRand / totRuns);
-        System.out.println("Total Max Random TM: " + totmaxTMRand / totRuns);
-        System.out.println("Total Max Random WP: " + totmaxWPRand / totRuns);
-
         System.out.println("Total Min Random FW: " + totMinFWRand / totRuns);
+
+        System.out.println("Total Max Random IDS: " + totmaxIDSRand / totRuns);
         System.out.println("Total Min Random IDS: " + totMinIDSRand / totRuns);
+
+        System.out.println("Total Max Random TM: " + totmaxTMRand / totRuns);
         System.out.println("Total Min Random TM: " + totMinTMRand / totRuns);
+
+        System.out.println("Total Max Random WP: " + totmaxWPRand / totRuns);
         System.out.println("Total Min Random WP: " + totMinWPRand / totRuns);
+
+
 
         System.out.println("Overall Max Single: " + totOverallMaxSingle / totRuns);
         System.out.println("Overall Min Single: " + totOverallMinSingle / totRuns);
@@ -255,22 +269,23 @@ public class App4 {
     // Build fake edge routers, load flows from file, assign policies
     private static void buildFlowsAndEdgeRouters() throws IOException {
         for (Node node : PathFinder.ERList) {
-            FakeEdgeRouters.add(new EdgeRouter(node));
+            FakeEdgeRouters.put(node.getId(), new EdgeRouter(node));
         }
 
         HashMap<String, RoutingTable> routers = RouterUtils.setRouters(graph);
 
         List<String> lines = Files.readAllLines(Paths.get("src/main/java/com/myproject/flowSpread1.txt"));
-        int count3333 = 0;
         for (String line : lines) {
             String[] parts = line.trim().split("\\s+");
 
             String ip = parts[0];
             String count = parts[1];
             Integer cool = Integer.parseInt(count);
-            int element = RandomUtils.getRandomElemantInList(FakeEdgeRouters);
+            List<EdgeRouter> routers1 = new ArrayList<>(FakeEdgeRouters.values());
+            EdgeRouter edgeRouter = routers1.get(RandomUtils.getRandomElemantInList(routers1));
 
-            Flow currentFlow = new Flow(ip, Integer.parseInt(count), FakeEdgeRouters.get(element).getNode());
+            Flow currentFlow = new Flow(ip, Integer.parseInt(count), edgeRouter.getNode());
+
             
             int temp = RandomUtils.getRandomElemant();
 
@@ -295,11 +310,8 @@ public class App4 {
                     break;
             }
             currentFlow.setFlowPolicy(flowPolicy);
-            FakeEdgeRouters.get(element).addFlow(ip, currentFlow);
+            edgeRouter.addFlow(ip, currentFlow);
             flows.add(currentFlow);
-            if(count3333 >= 50){
-                break;
-            }
         }
     }
 
@@ -313,7 +325,7 @@ public class App4 {
         int totalTM = 0;
         int totalWP = 0;
 
-        for (EdgeRouter edgeRouter : FakeEdgeRouters) {
+        for (EdgeRouter edgeRouter : FakeEdgeRouters.values()) {
 
             int fw = 0;
             int ids = 0;
@@ -584,14 +596,27 @@ public class App4 {
         TMpackestRand = new HashMap<>(TMpackest);
         WPpackestRand = new HashMap<>(WPpackest);
 
+        int howManyFWIDSWP = 32;
+        int howManyFWIDS = 16;
+        int howManyIDSTM = 8;
+
+        for (EdgeRouter edgeRouter : FakeEdgeRouters.values()) {
+            for (int index = 0; index < howManyFWIDSWP; index++) {
+                edgeRouter.addFWIdsWpPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP), graph));
+            }
+            for (int index = 0; index < howManyFWIDS; index++) {
+                edgeRouter.addFwIdsPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.FW, PolicyType.IDS), graph));
+            }
+            for (int index = 0; index < howManyIDSTM; index++) {
+                edgeRouter.addIdsTmPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.IDS, PolicyType.TM), graph));
+            }
+        }
 
         for (Flow flow : flows) {
 
-            org.graphstream.graph.Path greedyPath =
-                    PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+            Path greedyPath = PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
-            org.graphstream.graph.Path randomPath =
-                    PathFinder.findRandomPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph);
+            Path randomPath = FakeEdgeRouters.get(flow.getNode().getId()).getRandomPath(flow.getFlowPolicy());
 
             // org.graphstream.graph.Path optimalPath =
             //         PathFinder.findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
@@ -720,7 +745,7 @@ public class App4 {
     totOverallMinSingle = Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
 
     totMinFWSingle += fwMin;
-    totMinIDSSingle = idsMin;
+    totMinIDSSingle += idsMin;
     totMinTMSingle += tmMin;
     totMinWPSingle += wpMin;
 
@@ -749,7 +774,7 @@ public class App4 {
     System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
 
     totMinFWRand += fwMin;
-    totMinIDSRand = idsMin;
+    totMinIDSRand += idsMin;
     totMinTMRand += tmMin;
     totMinWPRand += wpMin;
 
@@ -768,5 +793,62 @@ public class App4 {
             .forEach(e ->
                 System.out.print(e.getKey() + ": " + e.getValue() + " | "));
         System.out.println();
+    }
+    private static final int DEFAULT_MIDDLEBOX_CAPACITY = 1010000;
+
+    private static void MathStuff(Map<String, Integer> FWpackest_,Map<String, Integer> IDSpackest_,Map<String, Integer> TMpackest_,Map<String, Integer> WPpackest_) {
+
+        // minimize λ
+        double lambda = 0.0;
+
+        // (h_e,p)
+        Map<String, Integer> allMbLoads = new HashMap<>();
+        allMbLoads.putAll(FWpackest_);
+        allMbLoads.putAll(IDSpackest_);
+        allMbLoads.putAll(TMpackest_);
+        allMbLoads.putAll(WPpackest_);
+
+        System.out.println("Total middleboxes being checked: " + allMbLoads.size());
+
+        // t(h_e,p) ≥ 0
+        for (Map.Entry<String, Integer> entry : allMbLoads.entrySet()) {
+            if (entry.getValue() < 0) {
+                System.out.println(entry.getKey() + " has negative traffic: " + entry.getValue());
+            }
+        }
+        // Σ t(h_e,p) = T_e,p
+        for (EdgeRouter er : FakeEdgeRouters.values()) {
+            int totalAssigned = 0;
+            for (Flow flow : er.getFlows().values()) {
+                totalAssigned += flow.getPakets();
+            }
+            int totalAdvertised = er.getFlows().values().stream().mapToInt(Flow::getPakets).sum();
+
+            System.out.println("Edge router " + er.getNode().getId() + " | flows: " + er.getFlows().size() + " | total assigned packets: " + totalAssigned + " | total advertised packets: " + totalAdvertised);
+
+            assert totalAssigned == totalAdvertised;
+        }
+        // Σ Σ t(h_e,p) ≤ λ * c(m)
+        for (Map.Entry<String, Integer> entry : allMbLoads.entrySet()) {
+            String mbName = entry.getKey();
+            double load = entry.getValue();
+            double utilization = load / (double) DEFAULT_MIDDLEBOX_CAPACITY;
+
+            System.out.println("Middlebox " + mbName + " | load: " + load + " | capacity: " + DEFAULT_MIDDLEBOX_CAPACITY + " | utilization: " + utilization);
+
+            if (utilization > lambda) {
+                System.out.println(mbName + " is the most used");
+                lambda = utilization;
+            }
+        }
+
+        System.out.println("Final lambda: " + lambda);
+
+        // λ ≤ 1
+        if (lambda > 1.0) {
+            System.out.println("Middlebox capacity exceeded");
+        } else {
+            System.out.println("Middleboxes are within capacity");
+        }
     }
 }

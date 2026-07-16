@@ -9,7 +9,7 @@ public class Flow {
     private int pakets;
     private String id;
     private List<PolicyType> flowPolicy;
-
+    private String flowPolicyName;
 
     private Integer totFlows = 0;
 
@@ -49,6 +49,7 @@ public class Flow {
 
     public void setFlowPolicy(List<PolicyType> flowPolicy) {
         this.flowPolicy = flowPolicy;
+        flowPolicyName = getFlowPolicyName();
     }
 
     public Integer getTotFlows() {
@@ -57,5 +58,12 @@ public class Flow {
 
     public void setTotFlows(Integer totFlows) {
         this.totFlows = totFlows;
+    }
+    public String getFlowPolicyName(){
+        String name = "";
+        for (PolicyType policyType : flowPolicy) {
+            name.concat(policyType.name());
+        }
+        return name;
     }
 }
