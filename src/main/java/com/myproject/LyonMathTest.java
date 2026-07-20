@@ -8,41 +8,11 @@ import java.util.Set;
 
 import com.google.ortools.Loader;
 import com.google.ortools.linearsolver.*;
-
-/**
- * Implements the load-balancing LP from Eq. 1 of:
- * "Scalable and Balanced Policy Enforcement Through Hybrid SDN-Label
- * Switching" (Odegbile, Chen, Zhang), using the same evaluation setup
- * described in Section IV of the paper:
- *
- *  - Middlebox types & counts: FW=8, IDS=8, WP=4, TM=4 (Sec. IV-A)
- *  - Middlebox capacities: FW=1M, IDS=1.5M, WP=1M, TM=1M packets
- *    (Table II caption: "the capacities of the four types of middleboxes
- *    are 1M, 1.5M, 1M and 1M respectively", listed in FW, IDS, WP, TM order)
- *  - Three policy types (Sec. IV-A):
- *      Type 1: FW -> IDS -> WP,  32 alt. paths (= half FW x half IDS x half WP = 4x4x2)
- *      Type 2: FW -> IDS,        16 alt. paths (= half FW x half IDS = 4x4)
- *      Type 3: IDS -> TM,         8 alt. paths (= half IDS x half TM = 4x2)
- *  - Total traffic: 1M - 10M packets, split evenly across the 3 policy
- *    types, then distributed across edge switches (Sec. IV-A/B).
- *
- * Variables:   t(h_e,p)  -- continuous traffic portion routed on path h
- *                           for policy p at edge switch e
- *              lambda    -- max middlebox load factor, 0 <= lambda <= 1
- *
- * min  lambda
- * s.t. sum_{h in H_e,p} t(h) = T_e,p                 for all e in E, p in P_e
- *      sum_{e,p,h : m in h} t(h) <= lambda * c(m)     for all m in M
- *      t(h) >= 0
- *      0 <= lambda <= 1
- */
 public class LyonMathTest {
 
     static final Random rand = new Random();
 
-    //-----------------------------
-    // Middlebox types (Sec. IV-A)
-    //-----------------------------
+    // Middlebox types
 
     enum MBType {
         FW(8, 1_000_000),
@@ -59,7 +29,7 @@ public class LyonMathTest {
         }
     }
 
-    // Global middlebox index layout: [FW 0-7][IDS 8-15][WP 16-19][TM 20-23]
+    // Global middlebox index layout:
     static int startIndex(MBType type) {
         int idx = 0;
         for (MBType t : MBType.values()) {
@@ -75,23 +45,21 @@ public class LyonMathTest {
         return total;
     }
 
-    // A single alternative enforcement path: the specific middleboxes it
-    // traverses (mirrors He,p built from half-pools of the required types).
+ 
     static class Path {
         Set<Integer> usesMB = new LinkedHashSet<>();
         MPVariable t; // t(h_e,p)
     }
 
-    // A policy p as it applies to one edge switch e: holds He,p and Te,p.
+    // A policy p as it applies to one edge switch
     static class EdgePolicy {
         int edge;
-        int policyType; // 0, 1, or 2 (see PolicyType below)
-        double traffic; // T_e,p
-        List<Path> paths = new ArrayList<>(); // H_e,p
+        int policyType; // 0, 1, or 2
+        double traffic;
+        List<Path> paths = new ArrayList<>();
     }
 
-    // The 3 policy types from Sec. IV-A, each with its required function
-    // sequence and the number of alternative paths it is assigned.
+    // sequence and the number of alternative paths it is assigned
     enum PolicyType {
         WEB_TRAFFIC(new MBType[]{MBType.FW, MBType.IDS, MBType.WP}, 32, "FW -> IDS -> WP"),
         SECURITY_WATCH(new MBType[]{MBType.FW, MBType.IDS}, 16, "FW -> IDS"),
@@ -108,7 +76,7 @@ public class LyonMathTest {
         }
     }
 
-    // Pick `half` distinct global indices at random from the pool of `type`.
+    // pick half distinct global indices at random from the pool of type
     static List<Integer> randomHalfPool(MBType type) {
         int start = startIndex(type);
         int half = type.count / 2;
@@ -118,9 +86,7 @@ public class LyonMathTest {
         return pool.subList(0, half);
     }
 
-    // Build He,p: the cross product of half-pools for each function in the
-    // policy's sequence, per the paper's "half middleboxes of each type"
-    // path-count derivation (e.g. 4x4x2=32).
+    // the cross product of half-pools for each function
     static List<Path> buildAlternativePaths(PolicyType policyType) {
 
         List<List<Integer>> halfPools = new ArrayList<>();
@@ -152,20 +118,12 @@ public class LyonMathTest {
 
         Loader.loadNativeLibraries();
 
-        //-----------------------------
-        // Simulation Parameters
-        //-----------------------------
-
-        // The paper uses ~160 edge routers (16 core routers x 10 edge
-        // routers each); we scale down to a manageable demo size while
-        // keeping the same per-edge traffic-generation logic.
+        // parameters
         int numEdgeSwitches = 20;
 
         int middleboxes = totalMiddleboxes();
 
-        //-----------------------------
-        // Middlebox Capacities  c(m), per Sec. IV-A/Table II
-        //-----------------------------
+        // middlebox capacities
 
         int[] capacity = new int[middleboxes];
         for (MBType type : MBType.values()) {
@@ -175,18 +133,7 @@ public class LyonMathTest {
             }
         }
 
-        //-----------------------------
-        // Traffic generation (Sec. IV-A):
-        // total packets in [1M, 10M], split evenly across the 3 policy
-        // types, then distributed across edge switches with random
-        // (Dirichlet-like) proportions.
-        //
-        // Since these are the paper's own realistic parameters (not
-        // artificially padded), a rare unlucky random draw of half-pools
-        // and edge weights can still concentrate too much traffic on one
-        // middlebox even at lambda=1. We retry with a fresh random draw
-        // a few times rather than silently giving up.
-        //-----------------------------
+        // traffic generation
 
         MPSolver solver = null;
         MPVariable lambda = null;
@@ -206,12 +153,11 @@ public class LyonMathTest {
 
             for (PolicyType pt : PolicyType.values()) {
 
-                // Random weights per edge switch, normalized to sum to 1,
-                // used to split this policy type's total traffic across edges.
+                // random weights per edge switch
                 double[] weights = new double[numEdgeSwitches];
                 double weightSum = 0;
                 for (int e = 0; e < numEdgeSwitches; e++) {
-                    weights[e] = 0.2 + rand.nextDouble(); // avoid near-zero shares
+                    weights[e] = 0.2 + rand.nextDouble();
                     weightSum += weights[e];
                 }
 
@@ -227,10 +173,7 @@ public class LyonMathTest {
                 }
             }
 
-            //-----------------------------
-            // LP Solver (continuous, so GLOP -- t(h) and lambda are both
-            // continuous variables per the paper, not booleans)
-            //-----------------------------
+
 
             solver = MPSolver.createSolver("GLOP");
 
@@ -239,9 +182,7 @@ public class LyonMathTest {
                 return;
             }
 
-            //-----------------------------
-            // Variables: t(h) for every path of every (e,p), and lambda
-            //-----------------------------
+            // t(h) for every path of every (e,p) and lambda
 
             for (EdgePolicy ep : edgePolicies) {
                 for (int h = 0; h < ep.paths.size(); h++) {
@@ -250,13 +191,10 @@ public class LyonMathTest {
                 }
             }
 
-            // 0 <= lambda <= 1, per the paper's constraint "lambda <= 1"
+            // 0 <= lambda <= 1 "lambda <= 1"
             lambda = solver.makeNumVar(0, 1, "lambda");
 
-            //-----------------------------
-            // Constraint 1 (flow conservation):
             // sum_{h in He,p} t(h) = Te,p   for every (e,p)
-            //-----------------------------
 
             for (EdgePolicy ep : edgePolicies) {
 
@@ -268,10 +206,7 @@ public class LyonMathTest {
                 }
             }
 
-            //-----------------------------
-            // Constraint 2 (capacity):
             // sum_{e,p,h : m in h} t(h) <= lambda * c(m)   for every m
-            //-----------------------------
 
             for (int m = 0; m < middleboxes; m++) {
 
@@ -289,17 +224,13 @@ public class LyonMathTest {
                 c.setCoefficient(lambda, -finalCapacity[m]);
             }
 
-            //-----------------------------
-            // Objective: min lambda
-            //-----------------------------
+            // min lambda
 
             MPObjective objective = solver.objective();
             objective.setCoefficient(lambda, 1);
             objective.setMinimization();
 
-            //-----------------------------
             // Solve
-            //-----------------------------
 
             MPSolver.ResultStatus status = solver.solve();
 
@@ -319,9 +250,7 @@ public class LyonMathTest {
             return;
         }
 
-        //-----------------------------
-        // Compute per-middlebox load
-        //-----------------------------
+        // compute middlebox load
 
         double[] load = new double[middleboxes];
 
@@ -334,67 +263,71 @@ public class LyonMathTest {
                 }
             }
         }
-
-        //-----------------------------
-        // Report: overview
-        //-----------------------------
+        // print result
 
         System.out.println();
-        System.out.println("Simulation Setup (mirrors paper Sec. IV-A)");
-        System.out.println("-------------------------------------------");
-        System.out.printf("Total traffic volume        : %,d packets%n", totalPackets);
-        System.out.printf("Edge switches                : %d%n", numEdgeSwitches);
+        System.out.println("simulation setup");
+
+        System.out.println("total traffic: " + totalPackets + " packets");
+        System.out.println("edge switches: " + numEdgeSwitches);
+        System.out.println();
+
         for (PolicyType pt : PolicyType.values()) {
-            System.out.printf("Policy type %-16s: %-14s  (%d alt. paths/edge)%n",
-                    pt.name(), pt.description, pt.altPathCount);
+            System.out.println("policy: " + pt.name());
+            System.out.println("path: " + pt.description);
+            System.out.println("alternative paths: " + pt.altPathCount);
+            System.out.println();
         }
 
-        //-----------------------------
-        // Report: load distribution by middlebox type (mirrors Table II)
-        //-----------------------------
-
+        // load distribution by middlebox type
         System.out.println();
-        System.out.println("Load Distribution by Middlebox Type (Load-Balanced / LB)");
-        System.out.println("---------------------------------------------------------");
-        System.out.printf("%-6s %12s %12s %14s%n", "Type", "Min Load", "Max Load", "Capacity/box");
+        System.out.println("load distribution by middlebox type");
 
         for (MBType type : MBType.values()) {
             int start = startIndex(type);
             double min = Double.POSITIVE_INFINITY;
             double max = Double.NEGATIVE_INFINITY;
+
             for (int i = start; i < start + type.count; i++) {
                 min = Math.min(min, load[i]);
                 max = Math.max(max, load[i]);
             }
-            System.out.printf("%-6s %,12.0f %,12.0f %,14d%n",
-                    type.name(), min, max, type.capacityPerBox);
+
+            System.out.println(type.name());
+            System.out.println("min load: " + (int) min);
+            System.out.println("max load: " + (int) max);
+            System.out.println("capacity: " + type.capacityPerBox);
+            System.out.println();
         }
 
-        //-----------------------------
-        // Objective
-        //-----------------------------
+        // print lambda
+
+        System.out.println("minimum max utilization lambda: " + lambda.solutionValue());
+
+        // check capacity limits
 
         System.out.println();
-        System.out.printf("Minimum Max Utilization (Lambda) = %.4f%n",
-                lambda.solutionValue());
+        System.out.println("checking middlebox capacities");
 
-        //-----------------------------
-        // Verify Constraint 2
-        //-----------------------------
-
-        System.out.println();
-        System.out.println("Verification (per middlebox)");
         boolean allOk = true;
+
         for (int m = 0; m < middleboxes; m++) {
             double lhs = load[m];
             double rhs = lambda.solutionValue() * capacity[m];
-            boolean ok = lhs <= rhs + 1e-6;
-            allOk &= ok;
-            if (!ok) {
-                System.out.printf("MB %d : %.2f <= %.2f  FAILED%n", m, lhs, rhs);
+
+            if (lhs > rhs + 1e-6) {
+                allOk = false;
+                System.out.println("middlebox " + m + " failed");
+                System.out.println("load: " + lhs);
+                System.out.println("limit: " + rhs);
+                System.out.println();
             }
         }
-        System.out.println(allOk ? "All middlebox capacity constraints satisfied." :
-                "Some constraints failed (see above).");
+
+        if (allOk) {
+            System.out.println("all middleboxes passed");
+        } else {
+            System.out.println("some middleboxes failed");
+        }
     }
 }
