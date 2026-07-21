@@ -51,10 +51,10 @@ public class LyonMathTest {
         MPVariable t; // t(h_e,p)
     }
 
-    // A policy p as it applies to one edge switch
+    // A policy p that applies to one edge switch
     static class EdgePolicy {
         int edge;
-        int policyType; // 0, 1, or 2
+        int policyType; // 0 or 1 or 2
         double traffic;
         List<Path> paths = new ArrayList<>();
     }
@@ -86,7 +86,7 @@ public class LyonMathTest {
         return pool.subList(0, half);
     }
 
-    // the cross product of half-pools for each function
+    // the cross product of half pools for each function
     static List<Path> buildAlternativePaths(PolicyType policyType) {
 
         List<List<Integer>> halfPools = new ArrayList<>();
@@ -186,8 +186,7 @@ public class LyonMathTest {
 
             for (EdgePolicy ep : edgePolicies) {
                 for (int h = 0; h < ep.paths.size(); h++) {
-                    ep.paths.get(h).t = solver.makeNumVar(0, Double.POSITIVE_INFINITY,
-                            "t_e" + ep.edge + "_p" + ep.policyType + "_h" + h);
+                    ep.paths.get(h).t = solver.makeNumVar(0, Double.POSITIVE_INFINITY, "t_e" + ep.edge + "_p" + ep.policyType + "_h" + h);
                 }
             }
 
@@ -198,8 +197,7 @@ public class LyonMathTest {
 
             for (EdgePolicy ep : edgePolicies) {
 
-                MPConstraint c = solver.makeConstraint(ep.traffic, ep.traffic,
-                        "conserve_e" + ep.edge + "_p" + ep.policyType);
+                MPConstraint c = solver.makeConstraint(ep.traffic, ep.traffic, "conserve_e" + ep.edge + "_p" + ep.policyType);
 
                 for (Path path : ep.paths) {
                     c.setCoefficient(path.t, 1);
@@ -244,9 +242,7 @@ public class LyonMathTest {
         }
 
         if (solver == null) {
-            System.out.println("Could not find a feasible solution after "
-                    + maxAttempts + " attempts. Try increasing numEdgeSwitches "
-                    + "or lowering the traffic range.");
+            System.out.println("Could not find a feasible solution after " + maxAttempts + " attempts. Try increasing numEdgeSwitches " + "or lowering the traffic range.");
             return;
         }
 
@@ -294,7 +290,7 @@ public class LyonMathTest {
             }
 
             System.out.println(type.name());
-            System.out.println("min load: " + (int) min);
+            // System.out.println("min load: " + (int) min);
             System.out.println("max load: " + (int) max);
             System.out.println("capacity: " + type.capacityPerBox);
             System.out.println();
