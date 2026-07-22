@@ -8,6 +8,7 @@ import com.google.ortools.linearsolver.MPVariable;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.Path;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 public class OptimalLP {
 
     private static final int FW_COUNT = 8;
@@ -24,12 +26,15 @@ public class OptimalLP {
 
     private static final int FW_CAP = 1_000_000;
     private static final int IDS_CAP = 1_500_000;
-    private static final int WP_CAP = 1_000_000;
+    private static final int WP_CAP = 1_500_000;
     private static final int TM_CAP = 1_000_000;
 
     private static final List<PolicyType> CHAIN_FW_IDS_WP = List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP);
     private static final List<PolicyType> CHAIN_FW_IDS = List.of(PolicyType.FW, PolicyType.IDS);
     private static final List<PolicyType> CHAIN_IDS_TM = List.of(PolicyType.IDS, PolicyType.TM);
+
+
+
 
     private static class LPPath {
         Set<Integer> usesMB = new LinkedHashSet<>();
@@ -42,7 +47,7 @@ public class OptimalLP {
         public Map<String, Double> load = new HashMap<>();
     }
 
-    public static Result solve(Map<String, EdgeRouter> edgeRouters) {
+    public static Result solve(Map<String, EdgeRouter> edgeRouters, int totPackets) {
 
         Loader.loadNativeLibraries();
 
@@ -59,15 +64,135 @@ public class OptimalLP {
             return result;
         }
 
-        MPVariable lambda = solver.makeNumVar(0, Double.POSITIVE_INFINITY, "lambda");
+        MPVariable lambda = solver.makeNumVar(0, 1, "lambda");
+        MPVariable[] vars = solver.makeIntVarArray( 8960, 0, Double.POSITIVE_INFINITY, "mb");
 
-        // one capacity constraint per middlebox sum(t) - lambda * capacity <= 0
+        
+        MPConstraint constraint = solver.makeConstraint(0.0, 10.0, "sum_constraint");
+        for (MPVariable var : vars) {
+            constraint.setCoefficient(var, 1.0);
+        }
+
+        // on
+        // sole capacity constraint per middlebox sum(t) - lambda * capacity <= 0
         Map<Integer, MPConstraint> capConstraints = new HashMap<>();
         for (int m = 0; m < capacity.length; m++) {
-            MPConstraint c = solver.makeConstraint(-Double.POSITIVE_INFINITY, 0, "cap_m" + m);
-            c.setCoefficient(lambda, -capacity[m]);
-            capConstraints.put(m, c);
+            MPConstraint greaterThen0 = solver.makeConstraint(-Double.POSITIVE_INFINITY, 0, "cap_m" + m);
+            MPConstraint lessThen1 = solver.makeConstraint(-Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, "lambda_less_than_1");
+            greaterThen0.setCoefficient(lambda, -capacity[m]);
+            lessThen1.setCoefficient(lambda, 1);
+            capConstraints.put(m, greaterThen0);
+
         }
+        
+        int totalTraficP1 = 0;
+        int totalTraficP2 = 0;
+        int totalTraficP3 = 0;
+
+        int totalTraficPolicyForPolicys = 0;
+
+        Double[] varArrayERTEMP = new Double[160 * (32 + 16 + 8)];
+
+        MPVariable[] varArrayER = new MPVariable[160 * (32 + 16 + 8)];
+
+        List<MPConstraint> constraintsER = new ArrayList<MPConstraint>();
+
+        int i = 0;
+
+        for (int index = 0; index < varArrayER.length; index++) {
+            varArrayER[i] = solver.makeNumVar(0.0, Double.POSITIVE_INFINITY, "x_" + i);
+        }
+        // int erIndex = 0;
+        int constIndex = 0;
+        int varIndex = 0;
+        
+
+        for (EdgeRouter er : edgeRouters.values()) {
+            for (Map.Entry<Path, Integer> entry : er.getFWIdsWpPathsTraffic().entrySet())  {
+                totalTraficP1 += entry.getValue();
+                
+            }
+            constraintsER.add(constIndex, solver.makeConstraint(totalTraficP1,totalTraficP1));
+
+            for (int index = varIndex; index < (32 + varIndex); index++) {
+                constraintsER.get(constIndex).setCoefficient(varArrayER[varIndex], 1.0);
+                
+            }
+
+            varIndex += 32;
+            constIndex++;
+
+
+
+
+            for (Map.Entry<Path, Integer> entry : er.getFwIdsPathsTraffic().entrySet())  {
+                totalTraficP2 += entry.getValue();
+            }
+
+            constraintsER.add(constIndex, solver.makeConstraint(totalTraficP2,totalTraficP2));
+
+            for (int index = varIndex; index < (16 + varIndex); index++) {
+                constraint.setCoefficient(varArrayER[varIndex], 1.0);
+                
+            }
+            varIndex+=16;
+            constIndex++;
+
+
+
+
+            
+            for (Map.Entry<Path, Integer> entry : er.getIdsTmPathsTraffic().entrySet())  {
+                totalTraficP3 += entry.getValue();
+            }
+
+            constraintsER.add(constIndex, solver.makeConstraint(totalTraficP3,totalTraficP3));
+
+            for (int index = varIndex; index < (8 + varIndex); index++) {
+                constraint.setCoefficient(varArrayER[varIndex], 1.0);
+                
+            }
+            varIndex+=8;
+            constIndex++;
+            // erIndex ++;
+            
+
+            totalTraficP1 = 0;
+            totalTraficP2 = 0;
+            totalTraficP3 = 0;
+        }
+
+        int FW = 0;
+        int IDS = 0;
+        int WP = 0;
+        int TM = 0;
+        
+        List<MPConstraint> constraintsM = new ArrayList<MPConstraint>();
+
+
+        for (EdgeRouter er : edgeRouters.values()) {
+            for (Map.Entry<Path, Integer> entry : er.getFWIdsWpPathsTraffic().entrySet())  {
+                constraintsM.add(solver.makeConstraint(- Double.POSITIVE_INFINITY,lambda.solutionValue() * FW_CAP));
+                FW += entry.getValue();
+                IDS += entry.getValue();
+                WP += entry.getValue();
+            }
+            for (Map.Entry<Path, Integer> entry : er.getFwIdsPathsTraffic().entrySet())  {
+                FW += entry.getValue();
+                IDS += entry.getValue();
+            }
+            for (Map.Entry<Path, Integer> entry : er.getIdsTmPathsTraffic().entrySet())  {
+                IDS += entry.getValue();
+                TM += entry.getValue();
+            }
+        }
+
+
+
+
+
+
+
 
         List<LPPath> allPaths = new ArrayList<>();
 
@@ -111,7 +236,6 @@ public class OptimalLP {
 
         return result;
     }
-
     private static int[] buildIndexAndCapacity(Map<String, Integer> mbIndex) {
         int total = FW_COUNT + IDS_COUNT + WP_COUNT + TM_COUNT;
         int[] capacity = new int[total];

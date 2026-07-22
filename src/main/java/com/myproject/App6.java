@@ -13,6 +13,7 @@ import java.util.Comparator;
 import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
+import org.bouncycastle.jce.provider.JDKDSASigner.stdDSA;
 import org.graphstream.algorithm.Dijkstra;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,6 +22,8 @@ import org.graphstream.graph.Path;
 
 
 public class App6 {
+
+    private static int totPackets;
     private static int feasibleOptRuns = 0;
 
     private static int totmaxFWOpt;
@@ -59,7 +62,7 @@ public class App6 {
     private static HashMap<String, Integer> WPpackestRand = new HashMap<>();
 
 
-    private static int totRuns = 3;
+    private static int totRuns = 1;
 
     private static int totmaxFWSingle;
     private static int totmaxIDSSingle;
@@ -157,12 +160,19 @@ public class App6 {
             System.out.println("Overall Min Optimal: " + totOverallMinOpt / feasibleOptRuns);
             System.out.println("Average lambda: " + (totLambda / feasibleOptRuns));
         }
+        System.out.println("total packets in Network: " +totPackets);
+        int totalPaketsInEdgeRouters = 0;
+
+        for (Map.Entry<String, EdgeRouter> entry : FakeEdgeRouters.entrySet()) {
+            totalPaketsInEdgeRouters += entry.getValue().getTotPackets();
+        }
+        System.out.println("total pakets in all edge routers: "+ totalPaketsInEdgeRouters);
     }
     private static void runOptimalLP() {
-        OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters);
+        OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters, totPackets);
 
         if (!result.feasible) {
-            System.out.println();
+            System.out.println("lambda: "+result.lambda);
             System.out.println("OPTIMAL LP INFEASIBLE THIS RUN SKIPPED");
             return;
         }
@@ -189,6 +199,9 @@ public class App6 {
             }
         }
 
+        if(result.lambda > 1){
+        System.out.println("there is no solution");
+        }
         System.out.println();
         System.out.println("-----OPTIMAL LP THIS RUN");
         System.out.println("lambda: " + result.lambda);
@@ -346,7 +359,7 @@ public class App6 {
             FakeEdgeRouters.put(node.getId(), new EdgeRouter(node));
         }
 
-        HashMap<String, RoutingTable> routers = RouterUtils.setRouters(graph);
+        // HashMap<String, RoutingTable> routers = RouterUtils.setRouters(graph);
 
         List<String> lines = Files.readAllLines(Paths.get("src/main/java/com/myproject/flowSpread1.txt"));
         for (String line : lines) {
@@ -354,7 +367,7 @@ public class App6 {
 
             String ip = parts[0];
             String count = parts[1];
-            Integer cool = Integer.parseInt(count);
+            // Integer cool = Integer.parseInt(count);
             List<EdgeRouter> routers1 = new ArrayList<>(FakeEdgeRouters.values());
             EdgeRouter edgeRouter = routers1.get(RandomUtils.getRandomElemantInList(routers1));
 
@@ -685,13 +698,14 @@ public class App6 {
                 edgeRouter.addIdsTmPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.IDS, PolicyType.TM), graph));
             }
         }
+        totPackets = 0;
 
         for (Flow flow : flows) {
 
             Path greedyPath = PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+            Path randomPath = FakeEdgeRouters.get(flow.getNode().getId()).addTrafficToRandomPath(flow.getFlowPolicy(), flow.getPakets());
 
-            Path randomPath = FakeEdgeRouters.get(flow.getNode().getId()).getRandomPath(flow.getFlowPolicy());
-
+            totPackets += flow.getPakets();
             // org.graphstream.graph.Path optimalPath =
             //         PathFinder.findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
@@ -730,10 +744,13 @@ public class App6 {
                     FWpackestGreed.replace(nodeId, FWpackestGreed.get(nodeId) + flow.getPakets());
                 } else if (nodeId.startsWith(PolicyType.IDS.name())) {
                     IDSpackestGreed.replace(nodeId, IDSpackestGreed.get(nodeId) + flow.getPakets());
+
                 } else if (nodeId.startsWith(PolicyType.TM.name())) {
                     TMpackestGreed.replace(nodeId, TMpackestGreed.get(nodeId) + flow.getPakets());
+
                 } else if (nodeId.startsWith(PolicyType.WP.name())) {
                     WPpackestGreed.replace(nodeId, WPpackestGreed.get(nodeId) + flow.getPakets());
+
                 }
             }
             // Count packets for the rand path
