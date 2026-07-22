@@ -173,6 +173,11 @@ public class OptimalLP {
         for (EdgeRouter er : edgeRouters.values()) {
             for (Map.Entry<Path, Integer> entry : er.getFWIdsWpPathsTraffic().entrySet())  {
                 constraintsM.add(solver.makeConstraint(- Double.POSITIVE_INFINITY,lambda.solutionValue() * FW_CAP));
+
+                MPConstraint cap = solver.makeConstraint(-Double.POSITIVE_INFINITY, 0);
+                cap.setCoefficient(lambda, -FW_CAP);
+                constraintsM.add(cap);
+                
                 FW += entry.getValue();
                 IDS += entry.getValue();
                 WP += entry.getValue();
