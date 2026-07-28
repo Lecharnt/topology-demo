@@ -62,7 +62,7 @@ public class App6 {
     private static HashMap<String, Integer> WPpackestRand = new HashMap<>();
 
 
-    private static int totRuns = 1;
+    private static int totRuns = 15;
 
     private static int totmaxFWSingle;
     private static int totmaxIDSSingle;
@@ -142,38 +142,116 @@ public class App6 {
         System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
         System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
 
-        System.out.println();
-        System.out.println("----OPTIMAL (LP)");
-        if (feasibleOptRuns == 0) {
-            System.out.println("No feasible LP solution was found in any run.");
-        } else {
-            System.out.println("Feasible runs: " + feasibleOptRuns + " / " + totRuns);
-            System.out.println("Total Max Optimal FW: " + totmaxFWOpt / feasibleOptRuns);
-            System.out.println("Total Min Optimal FW: " + totMinFWOpt / feasibleOptRuns);
-            System.out.println("Total Max Optimal IDS: " + totmaxIDSOpt / feasibleOptRuns);
-            System.out.println("Total Min Optimal IDS: " + totMinIDSOpt / feasibleOptRuns);
-            System.out.println("Total Max Optimal TM: " + totmaxTMOpt / feasibleOptRuns);
-            System.out.println("Total Min Optimal TM: " + totMinTMOpt / feasibleOptRuns);
-            System.out.println("Total Max Optimal WP: " + totmaxWPOpt / feasibleOptRuns);
-            System.out.println("Total Min Optimal WP: " + totMinWPOpt / feasibleOptRuns);
-            System.out.println("Overall Max Optimal: " + totOverallMaxOpt / feasibleOptRuns);
-            System.out.println("Overall Min Optimal: " + totOverallMinOpt / feasibleOptRuns);
-            System.out.println("Average lambda: " + (totLambda / feasibleOptRuns));
-        }
-        System.out.println("total packets in Network: " +totPackets);
-        int totalPaketsInEdgeRouters = 0;
+System.out.println();
+System.out.println("----OPTIMAL (LP)");
+if (feasibleOptRuns == 0) {
+    System.out.println("No feasible LP solution was found in any run.");
+} else {
+    System.out.println("Feasible runs: " + feasibleOptRuns + " / " + totRuns);
+    System.out.println("Total Max Optimal FW: " + totmaxFWOpt / feasibleOptRuns);
+    System.out.println("Total Min Optimal FW: " + totMinFWOpt / feasibleOptRuns);
+    System.out.println("Total Max Optimal IDS: " + totmaxIDSOpt / feasibleOptRuns);
+    System.out.println("Total Min Optimal IDS: " + totMinIDSOpt / feasibleOptRuns);
+    System.out.println("Total Max Optimal TM: " + totmaxTMOpt / feasibleOptRuns);
+    System.out.println("Total Min Optimal TM: " + totMinTMOpt / feasibleOptRuns);
+    System.out.println("Total Max Optimal WP: " + totmaxWPOpt / feasibleOptRuns);
+    System.out.println("Total Min Optimal WP: " + totMinWPOpt / feasibleOptRuns);
+    System.out.println("Overall Max Optimal: " + totOverallMaxOpt / feasibleOptRuns);
+    System.out.println("Overall Min Optimal: " + totOverallMinOpt / feasibleOptRuns);
+    System.out.println("Average lambda: " + (totLambda / feasibleOptRuns));
 
-        for (Map.Entry<String, EdgeRouter> entry : FakeEdgeRouters.entrySet()) {
-            totalPaketsInEdgeRouters += entry.getValue().getTotPackets();
+    OptimalLP lp = new OptimalLP();
+
+    int origFW  = OptimalLP.FW_CAP;
+    int origIDS = OptimalLP.IDS_CAP;
+    int origWP  = OptimalLP.WP_CAP;
+    int origTM  = OptimalLP.TM_CAP;
+
+    double lowestFW = lp.findMinCapacity(
+            FakeEdgeRouters,
+            totPackets,
+            graph,
+            v -> OptimalLP.FW_CAP = v.intValue());
+    OptimalLP.FW_CAP = origFW;
+
+    double lowestIDS = lp.findMinCapacity(
+            FakeEdgeRouters,
+            totPackets,
+            graph,
+            v -> OptimalLP.IDS_CAP = v.intValue());
+    OptimalLP.IDS_CAP = origIDS;
+
+    double lowestWP = lp.findMinCapacity(
+            FakeEdgeRouters,
+            totPackets,
+            graph,
+            v -> OptimalLP.WP_CAP = v.intValue());
+    OptimalLP.WP_CAP = origWP;
+
+    double lowestTM = lp.findMinCapacity(
+            FakeEdgeRouters,
+            totPackets,
+            graph,
+            v -> OptimalLP.TM_CAP = v.intValue());
+    OptimalLP.TM_CAP = origTM;
+
+    if (lowestFW == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
+        System.out.println("Lowest feasible FW_CAP: none found");
+    else
+        System.out.println("Lowest feasible FW_CAP: " + (int) lowestFW);
+
+    if (lowestIDS == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
+        System.out.println("Lowest feasible IDS_CAP: none found");
+    else
+        System.out.println("Lowest feasible IDS_CAP: " + (int) lowestIDS);
+
+    if (lowestWP == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
+        System.out.println("Lowest feasible WP_CAP: none found");
+    else
+        System.out.println("Lowest feasible WP_CAP: " + (int) lowestWP);
+
+    if (lowestTM == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
+        System.out.println("Lowest feasible TM_CAP: none found");
+    else
+        System.out.println("Lowest feasible TM_CAP: " + (int) lowestTM);
+}
+
+System.out.println("total packets in Network: " + totPackets);
+
+int totalPaketsInEdgeRouters = 0;
+for (Map.Entry<String, EdgeRouter> entry : FakeEdgeRouters.entrySet()) {
+    totalPaketsInEdgeRouters += entry.getValue().getTotPackets();
+}
+System.out.println("total pakets in all edge routers: " + totalPaketsInEdgeRouters);
+    }
+
+    private static int findLowestCapacity(java.util.function.IntConsumer setCapacity) {
+        int lo = 0, hi = 2_000_000;
+        while (hi - lo > 1) {
+            int mid = (lo + hi) / 2;
+            setCapacity.accept(mid);
+            OptimalLP.Result r = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
+            if (r.feasible && r.lambda <= 1.0) {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
         }
-        System.out.println("total pakets in all edge routers: "+ totalPaketsInEdgeRouters);
+        setCapacity.accept(hi);
+        return hi;
     }
     private static void runOptimalLP() {
-        OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters, totPackets);
+        OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
 
         if (!result.feasible) {
-            System.out.println("lambda: "+result.lambda);
+            System.out.println("lambda: " + result.lambda);
             System.out.println("OPTIMAL LP INFEASIBLE THIS RUN SKIPPED");
+            return;
+        }
+
+        if (result.lambda > 1.0) {
+            System.out.println("lambda: " + result.lambda);
+            System.out.println("Capacity exceeded this run (lambda > 1) — skipped from stats");
             return;
         }
 
@@ -200,7 +278,8 @@ public class App6 {
         }
 
         if(result.lambda > 1){
-        System.out.println("there is no solution");
+            System.out.println("there is no solution");
+            return;
         }
         System.out.println();
         System.out.println("-----OPTIMAL LP THIS RUN");
@@ -218,6 +297,7 @@ public class App6 {
         totOverallMaxOpt += Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
         totOverallMinOpt += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
         totLambda += result.lambda;
+
     }
     private static void clearPublicVars() {
         graph = null;
