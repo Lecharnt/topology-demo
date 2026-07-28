@@ -3,11 +3,13 @@ package com.myproject;
 import org.graphstream.graph.Node;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
+
+import javax.print.DocFlavor.STRING;
 
 import org.graphstream.graph.Path;
 public class EdgeRouter {
@@ -15,12 +17,48 @@ public class EdgeRouter {
     private Node node;
     private HashMap<String, Flow> flows;
 
+    private int polcy1;
+    private int polcy2;
+    private int polcy3;
+
     private List<Path> FWIdsWpPaths = new ArrayList<>();
     private List<Path> FwIdsPaths = new ArrayList<>();
     private List<Path> IdsTmPaths = new ArrayList<>();
-    private final Map<PathType, double[]> pathWeights = new EnumMap<>(PathType.class);
+
+    private HashMap<Path, Integer> FWIdsWpPathsTraffic = new HashMap<>();
+    private HashMap<Path, Integer> FwIdsPathsTraffic = new HashMap<>();
+    private HashMap<Path, Integer> IdsTmPathsTraffic = new HashMap<>();
 
     private final Random random = new Random();
+
+    public int getAmountFWIdsWp(){
+        return FWIdsWpPaths.size();
+    }
+    public int getAmountFwIds(){
+        return FwIdsPaths.size();
+    }
+    public int getAmountIdsTm(){
+        return IdsTmPaths.size();
+    }
+
+    public Path getPacketsOnPoliciy(List<PolicyType> policies) {
+        if (policies.equals(List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP))) {
+            if (FWIdsWpPaths.isEmpty()) return null;
+            return FWIdsWpPaths.get(random.nextInt(FWIdsWpPaths.size()));
+        }
+
+        if (policies.equals(List.of(PolicyType.FW, PolicyType.IDS))) {
+            if (FwIdsPaths.isEmpty()) return null;
+            return FwIdsPaths.get(random.nextInt(FwIdsPaths.size()));
+        }
+
+        if (policies.equals(List.of(PolicyType.IDS, PolicyType.TM))) {
+            if (IdsTmPaths.isEmpty()) return null;
+            return IdsTmPaths.get(random.nextInt(IdsTmPaths.size()));
+        }
+
+        return null;
+    }
 
     public List<Path> getFWIdsWpPaths() {
         return FWIdsWpPaths;
@@ -72,17 +110,6 @@ public class EdgeRouter {
         IdsTmPaths.add(path);
     }
 
-    public void addPath(PathType policy, Path path) {
-        if (path == null) {
-            return;
-        }
-        switch (policy) {
-            case FW_IDS_WP -> FWIdsWpPaths.add(path);
-            case FW_IDS -> FwIdsPaths.add(path);
-            case IDS_TM -> IdsTmPaths.add(path);
-        }
-    }
-
     public Path getRandomIdsTmPath() {
         if (IdsTmPaths.isEmpty()) {
             return null;
@@ -90,59 +117,23 @@ public class EdgeRouter {
         return IdsTmPaths.get(random.nextInt(IdsTmPaths.size()));
     }
 
-    public void setPathWeights(PathType policy, double[] weights) {
-        pathWeights.put(policy, weights);
-    }
-
-    public double[] getPathWeights(PathType policy) {
-        return pathWeights.get(policy);
-    }
-
-    public List<Path> getPathsForPolicy(PathType policy) {
-        return switch (policy) {
-            case FW_IDS_WP -> FWIdsWpPaths;
-            case FW_IDS -> FwIdsPaths;
-            case IDS_TM -> IdsTmPaths;
-        };
-    }
-
     public Path getRandomPath(List<PolicyType> policies) {
-        PathType policyType = PathType.fromFlowPolicy(policies);
-        if (policyType == null) {
-            return null;
-        }
-        List<Path> paths = getPathsForPolicy(policyType);
-        if (paths.isEmpty()) {
-            return null;
-        }
-        return paths.get(random.nextInt(paths.size()));
-    }
-
-    public Path getWeightedPath(List<PolicyType> policies, String flowId) {
-        PathType policyType = PathType.fromFlowPolicy(policies);
-        if (policyType == null) {
-            return null;
+        if (policies.equals(List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP))) {
+            if (FWIdsWpPaths.isEmpty()) return null;
+            return FWIdsWpPaths.get(random.nextInt(FWIdsWpPaths.size()));
         }
 
-        List<Path> paths = getPathsForPolicy(policyType);
-        if (paths.isEmpty()) {
-            return null;
+        if (policies.equals(List.of(PolicyType.FW, PolicyType.IDS))) {
+            if (FwIdsPaths.isEmpty()) return null;
+            return FwIdsPaths.get(random.nextInt(FwIdsPaths.size()));
         }
 
-        double[] weights = pathWeights.get(policyType);
-        if (weights == null || weights.length != paths.size()) {
-            return getRandomPath(policies);
+        if (policies.equals(List.of(PolicyType.IDS, PolicyType.TM))) {
+            if (IdsTmPaths.isEmpty()) return null;
+            return IdsTmPaths.get(random.nextInt(IdsTmPaths.size()));
         }
 
-        double hash = (flowId.hashCode() & 0xFFFFFFFFL) / (double) 0x100000000L;
-        double cumulative = 0.0;
-        for (int i = 0; i < weights.length; i++) {
-            cumulative += weights[i];
-            if (hash <= cumulative) {
-                return paths.get(i);
-            }
-        }
-        return paths.get(paths.size() - 1);
+        return null;
     }
     
     public EdgeRouter(Node node) {
@@ -162,13 +153,49 @@ public class EdgeRouter {
     public Flow getFlow(String ip) {
         return flows.get(ip);
     }
-
+    public int getTotPackets() {
+        return polcy1 + polcy2 + polcy3;
+    }
     public void setFlows(HashMap<String, Flow> flows) {
         this.flows = flows;
+        polcy1 = 0;
+        polcy2 = 0;
+        polcy3 = 0;
+
+        for (Map.Entry<String, Flow> entry : flows.entrySet()){
+            if (entry.getValue().getFlowPolicy().equals(List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP))) {
+                polcy1+= entry.getValue().getPakets();
+            }
+
+            else if (entry.getValue().equals(List.of(PolicyType.FW, PolicyType.IDS))) {
+                polcy2+= entry.getValue().getPakets();
+            }
+
+            else if (entry.getValue().equals(List.of(PolicyType.IDS, PolicyType.TM))) {
+                polcy3+= entry.getValue().getPakets();
+            }
+            else{
+                System.err.println("aaasafadadfs");
+            }
+        }
     }
 
     public void addFlow(String ip, Flow flow) {
         flows.put(ip, flow);
+        if (flow.getFlowPolicy().equals(List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP))) {
+                polcy1 += flow.getPakets();
+        }
+
+        else if (flow.getFlowPolicy().equals(List.of(PolicyType.FW, PolicyType.IDS))) {
+            polcy2 += flow.getPakets();
+        }
+
+        else if (flow.getFlowPolicy().equals(List.of(PolicyType.IDS, PolicyType.TM))) {
+            polcy3 += flow.getPakets();
+        }
+        else{
+            System.err.println("aaasafadadfs");
+        }
     }
 
     public void removeFlow(String ip) {
@@ -185,5 +212,54 @@ public class EdgeRouter {
 
     public void setNode(Node node) {
         this.node = node;
+    }
+    public Path addTrafficToRandomFWIdsWpPath(int trafficAmount) {
+        if (FWIdsWpPaths.isEmpty()) {
+            return null;
+        }
+        Path path = FWIdsWpPaths.get(random.nextInt(FWIdsWpPaths.size()));
+        FWIdsWpPathsTraffic.merge(path, trafficAmount, Integer::sum);
+        return path;
+    }
+
+    public Path addTrafficToRandomFwIdsPath(int trafficAmount) {
+        if (FwIdsPaths.isEmpty()) {
+            return null;
+        }
+        Path path = FwIdsPaths.get(random.nextInt(FwIdsPaths.size()));
+        FwIdsPathsTraffic.merge(path, trafficAmount, Integer::sum);
+        return path;
+    }
+
+    public Path addTrafficToRandomIdsTmPath(int trafficAmount) {
+        if (IdsTmPaths.isEmpty()) {
+            return null;
+        }
+        Path path = IdsTmPaths.get(random.nextInt(IdsTmPaths.size()));
+        IdsTmPathsTraffic.merge(path, trafficAmount, Integer::sum);
+        return path;
+    }
+    public Path addTrafficToRandomPath(List<PolicyType> policies, int trafficAmount) {
+        if (policies.equals(List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP))) {
+            return addTrafficToRandomFWIdsWpPath(trafficAmount);
+        }
+        if (policies.equals(List.of(PolicyType.FW, PolicyType.IDS))) {
+            return addTrafficToRandomFwIdsPath(trafficAmount);
+        }
+        if (policies.equals(List.of(PolicyType.IDS, PolicyType.TM))) {
+            return addTrafficToRandomIdsTmPath(trafficAmount);
+        }
+        return null;
+    }
+    public HashMap<Path, Integer> getFWIdsWpPathsTraffic() {
+        return FWIdsWpPathsTraffic;
+    }
+
+    public HashMap<Path, Integer> getFwIdsPathsTraffic() {
+        return FwIdsPathsTraffic;
+    }
+
+    public HashMap<Path, Integer> getIdsTmPathsTraffic() {
+        return IdsTmPathsTraffic;
     }
 }
