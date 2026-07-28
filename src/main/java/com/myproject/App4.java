@@ -43,6 +43,11 @@ public class App4 {
     private static HashMap<String, Integer> TMpackestRand = new HashMap<>();
     private static HashMap<String, Integer> WPpackestRand = new HashMap<>();
 
+    private static HashMap<String, Integer> FWpackestOpt = new HashMap<>();
+    private static HashMap<String, Integer> IDSpackestOpt = new HashMap<>();
+    private static HashMap<String, Integer> TMpackestOpt = new HashMap<>();
+    private static HashMap<String, Integer> WPpackestOpt = new HashMap<>();
+
 
     private static int totRuns = 3;
 
@@ -56,6 +61,11 @@ public class App4 {
     private static int totmaxTMRand;
     private static int totmaxWPRand;
 
+    private static int totmaxFWOpt;
+    private static int totmaxIDSOpt;
+    private static int totmaxTMOpt;
+    private static int totmaxWPOpt;
+
 
 
     private static int totMinFWSingle;
@@ -68,11 +78,19 @@ public class App4 {
     private static int totMinTMRand;
     private static int totMinWPRand;
 
+    private static int totMinFWOpt;
+    private static int totMinIDSOpt;
+    private static int totMinTMOpt;
+    private static int totMinWPOpt;
+
     private static int totOverallMaxSingle;
     private static int totOverallMinSingle;
 
     private static int totOverallMaxRand;
     private static int totOverallMinRand;
+
+    private static int totOverallMaxOpt;
+    private static int totOverallMinOpt;
 
 
 
@@ -123,6 +141,18 @@ public class App4 {
         System.out.println("Total Max Random WP: " + totmaxWPRand / totRuns);
         System.out.println("Total Min Random WP: " + totMinWPRand / totRuns);
 
+        System.out.println("Total Max Optimized FW: " + totmaxFWOpt / totRuns);
+        System.out.println("Total Min Optimized FW: " + totMinFWOpt / totRuns);
+
+        System.out.println("Total Max Optimized IDS: " + totmaxIDSOpt / totRuns);
+        System.out.println("Total Min Optimized IDS: " + totMinIDSOpt / totRuns);
+
+        System.out.println("Total Max Optimized TM: " + totmaxTMOpt / totRuns);
+        System.out.println("Total Min Optimized TM: " + totMinTMOpt / totRuns);
+
+        System.out.println("Total Max Optimized WP: " + totmaxWPOpt / totRuns);
+        System.out.println("Total Min Optimized WP: " + totMinWPOpt / totRuns);
+
 
 
         System.out.println("Overall Max Single: " + totOverallMaxSingle / totRuns);
@@ -130,6 +160,9 @@ public class App4 {
 
         System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
         System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
+
+        System.out.println("Overall Max Optimized: " + totOverallMaxOpt / totRuns);
+        System.out.println("Overall Min Optimized: " + totOverallMinOpt / totRuns);
     }
 
     private static void clearPublicVars() {
@@ -153,6 +186,11 @@ public class App4 {
         IDSpackestRand.clear();
         TMpackestRand.clear();
         WPpackestRand.clear();
+
+        FWpackestOpt.clear();
+        IDSpackestOpt.clear();
+        TMpackestOpt.clear();
+        WPpackestOpt.clear();
     }
     // Config
     private static void setupConfig() {
@@ -169,7 +207,7 @@ public class App4 {
 
     // Build the graph and create all node types
     private static void buildGraph() {
-        int amount_of_edge_routers = 50;
+        int amount_of_edge_routers = 160;
         int amount_of_core_routers = 16;
         int amount_of_main_core_routers = 4;
 
@@ -596,20 +634,30 @@ public class App4 {
         TMpackestRand = new HashMap<>(TMpackest);
         WPpackestRand = new HashMap<>(WPpackest);
 
-        int howManyFWIDSWP = 32;
-        int howManyFWIDS = 16;
-        int howManyIDSTM = 8;
+        FWpackestOpt = new HashMap<>(FWpackest);
+        IDSpackestOpt = new HashMap<>(IDSpackest);
+        TMpackestOpt = new HashMap<>(TMpackest);
+        WPpackestOpt = new HashMap<>(WPpackest);
 
         for (EdgeRouter edgeRouter : FakeEdgeRouters.values()) {
-            for (int index = 0; index < howManyFWIDSWP; index++) {
-                edgeRouter.addFWIdsWpPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP), graph));
+            for (PathType pathType : PathType.values()) {
+                int pathCount = pathType.getPathCount();
+                for (int index = 0; index < pathCount; index++) {
+                    edgeRouter.addPath(pathType,
+                            PathFinder.findRandomPathThroughMBs(
+                                    edgeRouter.getNode(), pathType.getMiddleboxes(), graph));
+                }
             }
-            for (int index = 0; index < howManyFWIDS; index++) {
-                edgeRouter.addFwIdsPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.FW, PolicyType.IDS), graph));
-            }
-            for (int index = 0; index < howManyIDSTM; index++) {
-                edgeRouter.addIdsTmPath(PathFinder.findRandomPathThroughMBs(edgeRouter.getNode(), List.of(PolicyType.IDS, PolicyType.TM), graph));
-            }
+        }
+
+        LoadBalancerOptimizer.Result optimizationResult =
+                LoadBalancerOptimizer.solve(FakeEdgeRouters, LoadBalancerOptimizer.DEFAULT_CAPACITY);
+        LoadBalancerOptimizer.applyWeights(FakeEdgeRouters, optimizationResult);
+        System.out.println("LP lambda: " + optimizationResult.lambda
+                + " (optimal=" + optimizationResult.optimal + ")");
+        if (optimizationResult.lambda > 1.0) {
+            System.out.println("Warning: lambda > 1 means some middleboxes exceed capacity "
+                    + LoadBalancerOptimizer.DEFAULT_CAPACITY);
         }
 
         for (Flow flow : flows) {
@@ -617,6 +665,8 @@ public class App4 {
             Path greedyPath = PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
 
             Path randomPath = FakeEdgeRouters.get(flow.getNode().getId()).getRandomPath(flow.getFlowPolicy());
+            Path optimizedPath = FakeEdgeRouters.get(flow.getNode().getId())
+                    .getWeightedPath(flow.getFlowPolicy(), flow.getId());
 
             // org.graphstream.graph.Path optimalPath =
             //         PathFinder.findOptimalPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
@@ -675,6 +725,22 @@ public class App4 {
                     TMpackestRand.replace(nodeId, TMpackestRand.get(nodeId) + flow.getPakets());
                 } else if (nodeId.startsWith(PolicyType.WP.name())) {
                     WPpackestRand.replace(nodeId, WPpackestRand.get(nodeId) + flow.getPakets());
+                }
+            }
+
+            if (optimizedPath != null) {
+                for (Node node : optimizedPath.getNodePath()) {
+                    String nodeId = node.getId();
+
+                    if (nodeId.startsWith(PolicyType.FW.name())) {
+                        FWpackestOpt.replace(nodeId, FWpackestOpt.get(nodeId) + flow.getPakets());
+                    } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+                        IDSpackestOpt.replace(nodeId, IDSpackestOpt.get(nodeId) + flow.getPakets());
+                    } else if (nodeId.startsWith(PolicyType.TM.name())) {
+                        TMpackestOpt.replace(nodeId, TMpackestOpt.get(nodeId) + flow.getPakets());
+                    } else if (nodeId.startsWith(PolicyType.WP.name())) {
+                        WPpackestOpt.replace(nodeId, WPpackestOpt.get(nodeId) + flow.getPakets());
+                    }
                 }
             }
             // Count packets for the optimal path
@@ -785,6 +851,36 @@ public class App4 {
 
     totOverallMaxRand = Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
     totOverallMinRand = Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
+
+    fwMin = Collections.min(FWpackestOpt.values());
+    fwMax = Collections.max(FWpackestOpt.values());
+    idsMin = Collections.min(IDSpackestOpt.values());
+    idsMax = Collections.max(IDSpackestOpt.values());
+    tmMin = Collections.min(TMpackestOpt.values());
+    tmMax = Collections.max(TMpackestOpt.values());
+    wpMin = Collections.min(WPpackestOpt.values());
+    wpMax = Collections.max(WPpackestOpt.values());
+
+    System.out.println("\nOptimized (LP load-balanced)");
+    System.out.println("FW  Min: " + fwMin + " Max: " + fwMax);
+    System.out.println("IDS Min: " + idsMin + " Max: " + idsMax);
+    System.out.println("TM  Min: " + tmMin + " Max: " + tmMax);
+    System.out.println("WP  Min: " + wpMin + " Max: " + wpMax);
+    System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
+    System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
+
+    totMinFWOpt += fwMin;
+    totMinIDSOpt += idsMin;
+    totMinTMOpt += tmMin;
+    totMinWPOpt += wpMin;
+
+    totmaxFWOpt += fwMax;
+    totmaxIDSOpt += idsMax;
+    totmaxTMOpt += tmMax;
+    totmaxWPOpt += wpMax;
+
+    totOverallMaxOpt = Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
+    totOverallMinOpt = Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
 }
     private static void printMap(HashMap<String, Integer> map) {
         map.entrySet().stream()
