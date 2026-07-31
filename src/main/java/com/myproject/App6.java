@@ -62,7 +62,7 @@ public class App6 {
     private static HashMap<String, Integer> WPpackestRand = new HashMap<>();
 
 
-    private static int totRuns = 15;
+    private static int totRuns = 100;
 
     private static int totmaxFWSingle;
     private static int totmaxIDSSingle;
@@ -142,87 +142,39 @@ public class App6 {
         System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
         System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
 
-System.out.println();
-System.out.println("----OPTIMAL (LP)");
-if (feasibleOptRuns == 0) {
-    System.out.println("No feasible LP solution was found in any run.");
-} else {
-    System.out.println("Feasible runs: " + feasibleOptRuns + " / " + totRuns);
-    System.out.println("Total Max Optimal FW: " + totmaxFWOpt / feasibleOptRuns);
-    System.out.println("Total Min Optimal FW: " + totMinFWOpt / feasibleOptRuns);
-    System.out.println("Total Max Optimal IDS: " + totmaxIDSOpt / feasibleOptRuns);
-    System.out.println("Total Min Optimal IDS: " + totMinIDSOpt / feasibleOptRuns);
-    System.out.println("Total Max Optimal TM: " + totmaxTMOpt / feasibleOptRuns);
-    System.out.println("Total Min Optimal TM: " + totMinTMOpt / feasibleOptRuns);
-    System.out.println("Total Max Optimal WP: " + totmaxWPOpt / feasibleOptRuns);
-    System.out.println("Total Min Optimal WP: " + totMinWPOpt / feasibleOptRuns);
-    System.out.println("Overall Max Optimal: " + totOverallMaxOpt / feasibleOptRuns);
-    System.out.println("Overall Min Optimal: " + totOverallMinOpt / feasibleOptRuns);
-    System.out.println("Average lambda: " + (totLambda / feasibleOptRuns));
+        System.out.println();
+        System.out.println("----OPTIMAL (LP)");
+        if (feasibleOptRuns == 0) {
+            System.out.println("No feasible LP solution was found in any run.");
+        } else {
+            System.out.println("Feasible runs: " + feasibleOptRuns + " / " + totRuns);
+            System.out.println("Total Max Optimal FW: " + totmaxFWOpt / feasibleOptRuns);
+            System.out.println("Total Min Optimal FW: " + totMinFWOpt / feasibleOptRuns);
+            System.out.println("Total Max Optimal IDS: " + totmaxIDSOpt / feasibleOptRuns);
+            System.out.println("Total Min Optimal IDS: " + totMinIDSOpt / feasibleOptRuns);
+            System.out.println("Total Max Optimal TM: " + totmaxTMOpt / feasibleOptRuns);
+            System.out.println("Total Min Optimal TM: " + totMinTMOpt / feasibleOptRuns);
+            System.out.println("Total Max Optimal WP: " + totmaxWPOpt / feasibleOptRuns);
+            System.out.println("Total Min Optimal WP: " + totMinWPOpt / feasibleOptRuns);
+            System.out.println("Overall Max Optimal: " + totOverallMaxOpt / feasibleOptRuns);
+            System.out.println("Overall Min Optimal: " + totOverallMinOpt / feasibleOptRuns);
+            System.out.println("Average lambda: " + (totLambda / feasibleOptRuns));
 
-    OptimalLP lp = new OptimalLP();
+        }
 
-    int origFW  = OptimalLP.FW_CAP;
-    int origIDS = OptimalLP.IDS_CAP;
-    int origWP  = OptimalLP.WP_CAP;
-    int origTM  = OptimalLP.TM_CAP;
+        System.out.println("total packets in Network: " + totPackets);
 
-    double lowestFW = lp.findMinCapacity(
-            FakeEdgeRouters,
-            totPackets,
-            graph,
-            v -> OptimalLP.FW_CAP = v.intValue());
-    OptimalLP.FW_CAP = origFW;
-
-    double lowestIDS = lp.findMinCapacity(
-            FakeEdgeRouters,
-            totPackets,
-            graph,
-            v -> OptimalLP.IDS_CAP = v.intValue());
-    OptimalLP.IDS_CAP = origIDS;
-
-    double lowestWP = lp.findMinCapacity(
-            FakeEdgeRouters,
-            totPackets,
-            graph,
-            v -> OptimalLP.WP_CAP = v.intValue());
-    OptimalLP.WP_CAP = origWP;
-
-    double lowestTM = lp.findMinCapacity(
-            FakeEdgeRouters,
-            totPackets,
-            graph,
-            v -> OptimalLP.TM_CAP = v.intValue());
-    OptimalLP.TM_CAP = origTM;
-
-    if (lowestFW == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
-        System.out.println("Lowest feasible FW_CAP: none found");
-    else
-        System.out.println("Lowest feasible FW_CAP: " + (int) lowestFW);
-
-    if (lowestIDS == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
-        System.out.println("Lowest feasible IDS_CAP: none found");
-    else
-        System.out.println("Lowest feasible IDS_CAP: " + (int) lowestIDS);
-
-    if (lowestWP == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
-        System.out.println("Lowest feasible WP_CAP: none found");
-    else
-        System.out.println("Lowest feasible WP_CAP: " + (int) lowestWP);
-
-    if (lowestTM == OptimalLP.NO_FEASIBLE_CAPACITY_FOUND)
-        System.out.println("Lowest feasible TM_CAP: none found");
-    else
-        System.out.println("Lowest feasible TM_CAP: " + (int) lowestTM);
-}
-
-System.out.println("total packets in Network: " + totPackets);
-
-int totalPaketsInEdgeRouters = 0;
-for (Map.Entry<String, EdgeRouter> entry : FakeEdgeRouters.entrySet()) {
-    totalPaketsInEdgeRouters += entry.getValue().getTotPackets();
-}
-System.out.println("total pakets in all edge routers: " + totalPaketsInEdgeRouters);
+        int totalPaketsInEdgeRouters = 0;
+        int totTm = 0;
+        for (Map.Entry<String, EdgeRouter> entry : FakeEdgeRouters.entrySet()) {
+            totalPaketsInEdgeRouters += entry.getValue().getTotPackets();
+            for(Map.Entry<Path, Integer> entrydd : entry.getValue().getIdsTmPathsTraffic().entrySet()){
+                totTm =  totTm + entrydd.getValue();
+            }
+        }
+        
+        System.out.println("total pakets in all edge routers: " + totalPaketsInEdgeRouters);
+        System.out.println("total tm traffic " + totTm);
     }
 
     private static int findLowestCapacity(java.util.function.IntConsumer setCapacity) {
@@ -455,6 +407,9 @@ System.out.println("total pakets in all edge routers: " + totalPaketsInEdgeRoute
 
             
             int temp = RandomUtils.getRandomElemant();
+
+            Random random = new Random();
+            temp = random.nextInt(3) + 1;
 
             String policy = "none";
             List<PolicyType> flowPolicy = new ArrayList<PolicyType>();

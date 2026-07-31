@@ -24,10 +24,10 @@ public class OptimalLP {
     private static final int WP_COUNT = 4;
     private static final int TM_COUNT = 4;
 
-    public static  int FW_CAP = 1022380;
-    public static  int IDS_CAP = 1358010;
-    public static  int WP_CAP = 1376647;
-    public static  int TM_CAP = 672259;
+    public static  int FW_CAP = 900672;
+    public static  int IDS_CAP = 1350009;
+    public static  int WP_CAP = 900672;
+    public static  int TM_CAP = 900672;
 
     private static final List<PolicyType> CHAIN_FW_IDS_WP = List.of(PolicyType.FW, PolicyType.IDS, PolicyType.WP);
     private static final List<PolicyType> CHAIN_FW_IDS = List.of(PolicyType.FW, PolicyType.IDS);
