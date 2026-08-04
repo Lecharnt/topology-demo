@@ -19,6 +19,11 @@ class GraphBuilder {
             graph.addNode(prefix + i).setAttribute("ui.style","fill-color: " + hexColor + "; size: 15px;");
         }
     }
+    static Node addStyledNode(Graph graph, String id, String hexColor) {
+        Node node = graph.addNode(id);
+        node.setAttribute("ui.style", "fill-color: " + hexColor + "; size: 15px;");
+        return node;
+    }
     static List<Integer> rangeList(int n) {
         List<Integer> list = new ArrayList<>(n);
         for (int i = 0; i < n; i++) list.add(i);
