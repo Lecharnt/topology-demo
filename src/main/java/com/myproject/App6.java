@@ -7,6 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.Collections;
 import java.util.Comparator;
 
@@ -15,11 +18,16 @@ import org.graphstream.graph.Node;
 import org.graphstream.graph.implementations.SingleGraph;
 import org.bouncycastle.jce.provider.JDKDSASigner.stdDSA;
 import org.graphstream.algorithm.Dijkstra;
+
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.graphstream.graph.Path;
 
+import org.graphstream.ui.spriteManager.Sprite;
+import org.graphstream.ui.spriteManager.SpriteManager;
+import org.graphstream.graph.Edge;
 
 public class App6 {
 
@@ -51,6 +59,11 @@ public class App6 {
     private static HashMap<String, Integer> TMpackest = new HashMap<>();
     private static HashMap<String, Integer> WPpackest = new HashMap<>();
 
+    private static HashMap<String, Integer> FWpackestLp = new HashMap<>();
+    private static HashMap<String, Integer> IDSpackestLp = new HashMap<>();
+    private static HashMap<String, Integer> TMpackestLp = new HashMap<>();
+    private static HashMap<String, Integer> WPpackestLp = new HashMap<>();
+
     private static HashMap<String, Integer> FWpackestGreed = new HashMap<>();
     private static HashMap<String, Integer> IDSpackestGreed = new HashMap<>();
     private static HashMap<String, Integer> TMpackestGreed = new HashMap<>();
@@ -62,7 +75,7 @@ public class App6 {
     private static HashMap<String, Integer> WPpackestRand = new HashMap<>();
 
 
-    private static int totRuns = 100;
+    private static int totRuns = 1;
 
     private static int totmaxFWSingle;
     private static int totmaxIDSSingle;
@@ -93,23 +106,34 @@ public class App6 {
     private static int totOverallMinRand;
 
 
+    // private static SpriteManager spriteManager;
+    // private static int packetId = 0;
+    // private static Random animationRandom = new Random();
 
+    // private static PacketAnimator animator;
     public static void main(String[] args) throws IOException {
         for (int index = 0; index < totRuns; index++) {
             clearPublicVars();
             PathFinder.clearPublicVars();
             setupConfig();
-            buildGraph();
+            graph = buildGraph(
+            50,
+            16,
+            4,
+            8,
+            8,
+            4,
+            4);
             sortNodesIntoLists();
             buildFlowsAndEdgeRouters();
-            reportEdgeRouterStats();
             wireTopologyEdges();
             styleGraphAndBuildDijkstraCache();
-            computeRoutingTables();
             simulateFlowsAndTallyPackets();
             runOptimalLP();
             printResultsAndDisplay();
-
+            
+            //startAnimatedSim();
+            
         }
         System.out.println();
         System.out.println("--------");
@@ -141,6 +165,8 @@ public class App6 {
         System.out.println("Total Min Random WP: " + totMinWPRand / totRuns);
         System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
         System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
+
+        
 
         System.out.println();
         System.out.println("----OPTIMAL (LP)");
@@ -177,21 +203,6 @@ public class App6 {
         System.out.println("total tm traffic " + totTm);
     }
 
-    private static int findLowestCapacity(java.util.function.IntConsumer setCapacity) {
-        int lo = 0, hi = 2_000_000;
-        while (hi - lo > 1) {
-            int mid = (lo + hi) / 2;
-            setCapacity.accept(mid);
-            OptimalLP.Result r = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
-            if (r.feasible && r.lambda <= 1.0) {
-                hi = mid;
-            } else {
-                lo = mid;
-            }
-        }
-        setCapacity.accept(hi);
-        return hi;
-    }
     private static void runOptimalLP() {
         OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
 
@@ -287,16 +298,10 @@ public class App6 {
     }
 
     // Build the graph and create all node types
-    private static void buildGraph() {
-        int amount_of_edge_routers = 50;
-        int amount_of_core_routers = 16;
-        int amount_of_main_core_routers = 4;
+    private static Graph buildGraph(int amount_of_edge_routers, int amount_of_core_routers, int amount_of_main_core_routers, 
+        int amount_of_firewalling, int amount_of_intrusion_detection, int amount_of_web_proxing, int amount_of_traffic_measurement) {
 
-        int amount_of_firewalling = 8;
-        int amount_of_intrusion_detection = 8;
-        int amount_of_web_proxing = 4;
-        int amount_of_traffic_measurement = 4;
-
+        Graph graphTemp = null;
         String red     = "#e74d3c74";
         String blue    = "#8e8a06";
         String green   = "#2ecc3175";
@@ -305,54 +310,27 @@ public class App6 {
         String cyan    = "#ff00fb74";
         String yellow  = "#73090969";
 
-        graph = new SingleGraph("Topology");
+        graphTemp = new SingleGraph("Topology");
 
         // add nodes core router cr1 er1
-        GraphBuilder.addStyledNodes(graph, "ER", amount_of_edge_routers, blue);
-        GraphBuilder.addStyledNodes(graph, "CR", amount_of_core_routers, green);
-        GraphBuilder.addStyledNodes(graph, "M", amount_of_main_core_routers, red);
+        addStyledNodes(graphTemp, "ER", amount_of_edge_routers, blue,PathFinder.ERList);
+        addStyledNodes(graphTemp, "CR", amount_of_core_routers, green, PathFinder.CRList);
+        addStyledNodes(graphTemp, "M", amount_of_main_core_routers, red, PathFinder.MList);
 
-        GraphBuilder.addStyledNodes(graph, "FW", amount_of_firewalling, orange);
-        GraphBuilder.addStyledNodes(graph, "IDS", amount_of_intrusion_detection, purple);
-        GraphBuilder.addStyledNodes(graph, "WP", amount_of_web_proxing, cyan);
-        GraphBuilder.addStyledNodes(graph, "TM", amount_of_traffic_measurement, yellow);
+        addStyledNodes(graphTemp, "FW", amount_of_firewalling, orange, PathFinder.FWList);
+        addStyledNodes(graphTemp, "IDS", amount_of_intrusion_detection, purple, PathFinder.IDSList);
+        addStyledNodes(graphTemp, "WP", amount_of_web_proxing, cyan, PathFinder.WPList);
+        addStyledNodes(graphTemp, "TM", amount_of_traffic_measurement, yellow, PathFinder.TMList);
+        return graphTemp;
+    }
+    private static void addStyledNodes(Graph graphTemp, String prefix, Integer amount, String color, List<Node> listOfNodes) {
+        for (int index = 0; index < amount; index++) {
+            listOfNodes.add(GraphBuilder.addStyledNode(graphTemp, prefix + index, color));
+        }
     }
 
     // Sort nodes into their type lists
     private static void sortNodesIntoLists() {
-        for (Node node : graph) {
-            String name = node.getId();
-            if (name.startsWith(PolicyType.FW.name())){
-                PathFinder.FWList.add(node);
-            }
-            else if (name.startsWith(PolicyType.IDS.name())){
-                PathFinder.IDSList.add(node);
-
-            }
-            else if (name.startsWith(PolicyType.TM.name())){
-                PathFinder.TMList.add(node);
-
-            }
-            else if (name.startsWith(PolicyType.WP.name())){
-                PathFinder.WPList.add(node);
-
-            }
-            else if (name.startsWith(RouterType.ER.name())){
-                PathFinder.ERList.add(node);
-
-            }
-            else if (name.startsWith(RouterType.CR.name())){
-                PathFinder.CRList.add(node);
-
-            }
-            else if (name.startsWith(RouterType.M.name())){
-                PathFinder.MList.add(node);
-            }
-            else
-                System.err.println("something whent wrong" + node.getId());
-        }
-
-
         for (Node node : graph) {
             List<Node> FWListR = new ArrayList<>();
             List<Node> IDSListR = new ArrayList<>();
@@ -435,75 +413,6 @@ public class App6 {
             edgeRouter.addFlow(ip, currentFlow);
             flows.add(currentFlow);
         }
-    }
-
-    // policy
-    private static void reportEdgeRouterStats() {
-        int totalFlows = 0;
-        int totalPackets = 0;
-
-        int totalFW = 0;
-        int totalIDS = 0;
-        int totalTM = 0;
-        int totalWP = 0;
-
-        for (EdgeRouter edgeRouter : FakeEdgeRouters.values()) {
-
-            int fw = 0;
-            int ids = 0;
-            int tm = 0;
-            int wp = 0;
-
-            for (Flow flow : edgeRouter.getFlows().values()) {
-
-                if (flow.getFlowPolicy().contains(PolicyType.FW)) {
-                    fw++;
-                    totalFW++;
-                }
-
-                if (flow.getFlowPolicy().contains(PolicyType.IDS)) {
-                    ids++;
-                    totalIDS++;
-                }
-
-                if (flow.getFlowPolicy().contains(PolicyType.TM)) {
-                    tm++;
-                    totalTM++;
-                }
-
-                if (flow.getFlowPolicy().contains(PolicyType.WP)) {
-                    wp++;
-                    totalWP++;
-                }
-
-                totalPackets += flow.getPakets();
-            }
-
-            totalFlows += edgeRouter.getFlows().size();
-
-            /*
-            System.out.println(
-                edgeRouter.getNode().getId() +
-                " | Flows: " + edgeRouter.getFlows().size() +
-                " | FW: " + fw +
-                " | IDS: " + ids +
-                " | TM: " + tm +
-                " | WP: " + wp
-            );
-            */
-        }
-
-        // System.out.println("Total flows: " + totalFlows);
-        // System.out.println("Total packets: " + totalPackets);
-
-        // if (totalFlows > 0) {
-        //     System.out.println("Average packets per flow: " + (double) totalPackets / totalFlows);
-        // }
-
-        // System.out.println("FW flows : " + totalFW);
-        // System.out.println("IDS flows: " + totalIDS);
-        // System.out.println("TM flows : " + totalTM);
-        // System.out.println("WP flows : " + totalWP);
     }
 
     // Wire up the topology edges
@@ -597,73 +506,6 @@ public class App6 {
         // System.out.println("found:"+findClosestMB(PolicyType.IDS,graph.getNode("WP0"),graph,100).getId());
     }
 
-    // compute per-node routing and closest-middlebox tables
-    private static void computeRoutingTables() {
-        Map<String, List<Node>> allLists = new HashMap<>();
-        allLists.put("FWList", PathFinder.FWList);
-        allLists.put("IDSList", PathFinder.IDSList);
-        allLists.put("WPList", PathFinder.WPList);
-        allLists.put("TMList", PathFinder.TMList);
-        allLists.put("ERList", PathFinder.ERList);
-        allLists.put("CRList", PathFinder.CRList);
-        allLists.put("MList", PathFinder.MList);
-        Map<Node, List<String>> routingTable = new HashMap<>();
-        // for (Map.Entry<String, List<Node>> entry : allLists.entrySet()) {
-        //     System.out.print(entry.getKey() + ": [");
-        //     for (Node n : entry.getValue()) {
-        //         System.out.print(n.getId() + " ");
-        //     }
-        //     System.out.println("]");
-        // }
-        for (Node node : graph) {
-            String name = node.getId();
-            if (name.startsWith(PolicyType.FW.name()) || name.startsWith(PolicyType.IDS.name())
-                    || name.startsWith(PolicyType.TM.name()) || name.startsWith(PolicyType.WP.name()))
-                continue;
-            Node fw  = PathFinder.findClosestMB(PolicyType.FW,  graph.getNode(name), 100);
-            Node ids = PathFinder.findClosestMB(PolicyType.IDS, graph.getNode(name), 100);
-            Node tm  = PathFinder.findClosestMB(PolicyType.TM,  graph.getNode(name), 100);
-            Node wp  = PathFinder.findClosestMB(PolicyType.WP,  graph.getNode(name), 100);
-            routingTable.put(graph.getNode(name), null);
-
-            // System.out.println(name + ": "
-            //     + (fw  != null ? fw.getId()  : "none")
-            //     + " " + (ids != null ? ids.getId() : "none")
-            //     + " " + (tm  != null ? tm.getId()  : "none")
-            //     + " " + (wp  != null ? wp.getId()  : "none"));
-            HashMap<String, Double> fwL  = PathFinder.findClosestMBList(PolicyType.FW,  graph.getNode(name), 100);
-            HashMap<String, Double> idsL = PathFinder.findClosestMBList(PolicyType.IDS, graph.getNode(name), 100);
-            HashMap<String, Double> tmL  = PathFinder.findClosestMBList(PolicyType.TM,  graph.getNode(name), 100);
-            HashMap<String, Double> wpL  = PathFinder.findClosestMBList(PolicyType.WP,  graph.getNode(name), 100);
-
-            // fwL.forEach((key, value) -> {
-            //     System.out.print("| "+key + " Hops: " + value);
-            // });
-            //             System.err.println();
-            // idsL.forEach((key, value) -> {
-            //     System.out.print("| " + key + " Hops: " + value);
-            // });
-            //             System.err.println();
-            // tmL.forEach((key, value) -> {
-            //     System.out.print("| " + key + " Hops: " + value);
-            // });
-            //             System.err.println();
-            // wpL.forEach((key, value) -> {
-            //     System.out.print("| " + key + " Hops: " + value);
-            // });
-            // System.err.println();
-            // System.err.println();
-
-            // System.err.println();
-            // System.err.println();
-
-        }
-        // for (Node node : graph) {
-        //     System.err.print("Rand name"+": "+ node.getId()+ " " + findClosestMBRandom(PolicyType.FW)+ " "+ findClosestMBRandom(PolicyType.IDS)+ " "+findClosestMBRandom(PolicyType.TM)+ " "+findClosestMBRandom(PolicyType.WP)+ "\n");
-        // }
-        // System.out.println("path through middle boxes");
-    }
-
     // Simulate flows through their middlebox chain
     private static void simulateFlowsAndTallyPackets() {
         List<PolicyType> allTypes = new ArrayList<>();
@@ -718,6 +560,11 @@ public class App6 {
         TMpackestRand = new HashMap<>(TMpackest);
         WPpackestRand = new HashMap<>(WPpackest);
 
+        FWpackestLp = new HashMap<>(FWpackest);
+        IDSpackestLp = new HashMap<>(IDSpackest);
+        TMpackestLp = new HashMap<>(TMpackest);
+        WPpackestLp = new HashMap<>(WPpackest);
+
         int howManyFWIDSWP = 32;
         int howManyFWIDS = 16;
         int howManyIDSTM = 8;
@@ -735,8 +582,11 @@ public class App6 {
         }
         totPackets = 0;
 
-        for (Flow flow : flows) {
+        OptimalLP.Result lpResult = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
 
+        for (Flow flow : flows) {
+            EdgeRouter er = FakeEdgeRouters.get(flow.getNode().getId());
+            Path chosenPath = OptimalLP.sendPacketViaOptimalLP(er, flow, flow.getPakets(), lpResult);
             Path greedyPath = PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
             Path randomPath = FakeEdgeRouters.get(flow.getNode().getId()).addTrafficToRandomPath(flow.getFlowPolicy(), flow.getPakets());
 
@@ -770,7 +620,22 @@ public class App6 {
             // Count packets for the greedy path
 
 
+            for (Node node : chosenPath.getNodePath()) {
+                String nodeId = node.getId();
 
+                if (nodeId.startsWith(PolicyType.FW.name())) {
+                    FWpackestLp.replace(nodeId, FWpackestLp.get(nodeId) + flow.getPakets());
+                } else if (nodeId.startsWith(PolicyType.IDS.name())) {
+                    IDSpackestLp.replace(nodeId, IDSpackestLp.get(nodeId) + flow.getPakets());
+
+                } else if (nodeId.startsWith(PolicyType.TM.name())) {
+                    TMpackestLp.replace(nodeId, TMpackestLp.get(nodeId) + flow.getPakets());
+
+                } else if (nodeId.startsWith(PolicyType.WP.name())) {
+                    WPpackestLp.replace(nodeId, WPpackestLp.get(nodeId) + flow.getPakets());
+
+                }
+            }
 
             for (Node node : greedyPath.getNodePath()) {
                 String nodeId = node.getId();
@@ -828,7 +693,15 @@ public class App6 {
 
     // Print results and display the graph
     private static void printResultsAndDisplay() {
-        //graph.display().enableAutoLayout();
+        //spriteManager = new SpriteManager(graph);
+        // graph.display().enableAutoLayout();
+        // try {
+        //     Thread.sleep(10000); // let it settle for 3 seconds
+        // } catch (InterruptedException e) {
+        //     Thread.currentThread().interrupt();
+        // }
+
+        // animator = new PacketAnimator(graph);
         System.out.println();
 
         // System.err.println("Single middle boxes");
@@ -909,70 +782,70 @@ public class App6 {
 
     totOverallMaxRand += Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
     totOverallMinRand += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
+
+
+
+    int fwMinLp = Collections.min(FWpackestLp.values());
+    int fwMaxLp = Collections.max(FWpackestLp.values());
+    int idsMinLp = Collections.min(IDSpackestLp.values());
+    int idsMaxLp = Collections.max(IDSpackestLp.values());
+    int tmMinLp = Collections.min(TMpackestLp.values());
+    int tmMaxLp = Collections.max(TMpackestLp.values());
+    int wpMinLp = Collections.min(WPpackestLp.values());
+    int wpMaxLp = Collections.max(WPpackestLp.values());
+
+    System.out.println("\nLP");
+    System.out.println("FW  Min: " + fwMinLp + " Max: " + fwMaxLp);
+    System.out.println("IDS Min: " + idsMinLp + " Max: " + idsMaxLp);
+    System.out.println("TM  Min: " + tmMinLp + " Max: " + tmMaxLp);
+    System.out.println("WP  Min: " + wpMinLp + " Max: " + wpMaxLp);
+
+    System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMinLp, idsMinLp, tmMinLp, wpMinLp)));
+    System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMaxLp, idsMaxLp, tmMaxLp, wpMaxLp)));
 }
-    private static void printMap(HashMap<String, Integer> map) {
-        map.entrySet().stream()
-            .sorted(Comparator.comparingInt(e ->
-                Integer.parseInt(e.getKey().replaceAll("\\D+", ""))))
-            .forEach(e ->
-                System.out.print(e.getKey() + ": " + e.getValue() + " | "));
-        System.out.println();
+
+
+
+
+    private static void startAnimatedSim() {
+        
+        ScheduledExecutorService executor =
+                Executors.newSingleThreadScheduledExecutor();
+
+        executor.scheduleAtFixedRate(() -> {
+
+            Node er = PathFinder.ERList.get(
+                    rand.nextInt(PathFinder.ERList.size())
+            );
+
+            EdgeRouter router = FakeEdgeRouters.get(er.getId());
+
+            Path path = router.getTotRandomPath(rand);
+
+
+            isContiguous(path);
+            if (path != null) {
+                
+                System.out.println(path.getNodePath());
+                //animator.spawn(path);
+            }
+
+        }, 0, 1000, TimeUnit.MILLISECONDS);
     }
-    private static final int DEFAULT_MIDDLEBOX_CAPACITY = 1010000;
-
-    private static void MathStuff(Map<String, Integer> FWpackest_,Map<String, Integer> IDSpackest_,Map<String, Integer> TMpackest_,Map<String, Integer> WPpackest_) {
-
-        // minimize λ
-        double lambda = 0.0;
-
-        // (h_e,p)
-        Map<String, Integer> allMbLoads = new HashMap<>();
-        allMbLoads.putAll(FWpackest_);
-        allMbLoads.putAll(IDSpackest_);
-        allMbLoads.putAll(TMpackest_);
-        allMbLoads.putAll(WPpackest_);
-
-        System.out.println("Total middleboxes being checked: " + allMbLoads.size());
-
-        // t(h_e,p) ≥ 0
-        for (Map.Entry<String, Integer> entry : allMbLoads.entrySet()) {
-            if (entry.getValue() < 0) {
-                System.out.println(entry.getKey() + " has negative traffic: " + entry.getValue());
-            }
-        }
-        // Σ t(h_e,p) = T_e,p
-        for (EdgeRouter er : FakeEdgeRouters.values()) {
-            int totalAssigned = 0;
-            for (Flow flow : er.getFlows().values()) {
-                totalAssigned += flow.getPakets();
-            }
-            int totalAdvertised = er.getFlows().values().stream().mapToInt(Flow::getPakets).sum();
-
-            System.out.println("Edge router " + er.getNode().getId() + " | flows: " + er.getFlows().size() + " | total assigned packets: " + totalAssigned + " | total advertised packets: " + totalAdvertised);
-
-            assert totalAssigned == totalAdvertised;
-        }
-        // Σ Σ t(h_e,p) ≤ λ * c(m)
-        for (Map.Entry<String, Integer> entry : allMbLoads.entrySet()) {
-            String mbName = entry.getKey();
-            double load = entry.getValue();
-            double utilization = load / (double) DEFAULT_MIDDLEBOX_CAPACITY;
-
-            System.out.println("Middlebox " + mbName + " | load: " + load + " | capacity: " + DEFAULT_MIDDLEBOX_CAPACITY + " | utilization: " + utilization);
-
-            if (utilization > lambda) {
-                System.out.println(mbName + " is the most used");
-                lambda = utilization;
-            }
-        }
-
-        System.out.println("Final lambda: " + lambda);
-
-        // λ ≤ 1
-        if (lambda > 1.0) {
-            System.out.println("Middlebox capacity exceeded");
-        } else {
-            System.out.println("Middleboxes are within capacity");
+    private static boolean isContiguous(Path path) {
+    List<Node> nodes = path.getNodePath();
+    List<Edge> edges = path.getEdgePath();
+    for (int i = 0; i < edges.size(); i++) {
+        Node a = nodes.get(i);
+        Node b = nodes.get(i + 1);
+        Edge e = edges.get(i);
+        boolean connects = (e.getSourceNode().equals(a) && e.getTargetNode().equals(b))
+                         || (e.getSourceNode().equals(b) && e.getTargetNode().equals(a));
+        if (!connects) {
+            System.out.println("BROKEN at index " + i + ": " + a.getId());
+            return false;
         }
     }
+    return true;
+}
 }

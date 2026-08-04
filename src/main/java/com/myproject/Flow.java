@@ -1,11 +1,16 @@
 package com.myproject;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.graphstream.graph.Graph;
 import org.graphstream.graph.Node;
 
-public class Flow {
+public class Flow implements Serializable{
 
-    private Node node;
+    private transient Node node;
+    private String savedNodeId;
+
     private int pakets;
     private String id;
     private List<PolicyType> flowPolicy;
@@ -19,6 +24,17 @@ public class Flow {
         this.node = node_;
         this.flowPolicy = new ArrayList<PolicyType>();
     }
+
+    //Converts this Flow Node reference into its serializable id
+    public void toSaved() {
+        savedNodeId = (node != null) ? node.getId() : null;
+    }
+
+    // Rebuilds this Flow live Node reference from the saved id
+    public void fromSaved(Graph graph) {
+        node = (savedNodeId != null) ? graph.getNode(savedNodeId) : null;
+    }
+
     public int getPakets() {
         return pakets;
     }

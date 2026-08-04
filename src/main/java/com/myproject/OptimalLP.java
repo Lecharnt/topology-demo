@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 public class OptimalLP {
@@ -33,15 +34,24 @@ public class OptimalLP {
     private static final List<PolicyType> CHAIN_FW_IDS = List.of(PolicyType.FW, PolicyType.IDS);
     private static final List<PolicyType> CHAIN_IDS_TM = List.of(PolicyType.IDS, PolicyType.TM);
 
+    private static final Map<String, Map<Path, Double>> lastFeasiblePathTraffic = new HashMap<>();
+    private static final Random weightedRand = new Random();
+    
     private static class LPPath {
         Set<Integer> usesMB = new LinkedHashSet<>();
         MPVariable t;
+        Path path;
+        String poolKey;
     }
 
     public static class Result {
         public boolean feasible;
         public double lambda;
         public Map<String, Double> load = new HashMap<>();
+        public Map<String, Map<Path, Double>> pathTraffic = new HashMap<>();
+    }
+    public static String poolKey(String erId, List<PolicyType> chain) {
+        return erId + "_" + chain.hashCode();
     }
     public double findMinCapacity(Map<String, EdgeRouter> ers, int totPackets, Graph graph,
                             java.util.function.Consumer<Integer> setCapacity) {
@@ -285,8 +295,12 @@ public class OptimalLP {
         double[] loadByIndex = new double[capacity.length];
         for (LPPath p : allPaths) {
             double tVal = p.t.solutionValue();
+
             if (tVal <= 0)
                 continue;
+
+            result.pathTraffic.computeIfAbsent(p.poolKey, k -> new HashMap<>()).put(p.path, tVal);
+
             for (int m : p.usesMB) {
                 loadByIndex[m] += tVal;
             }
@@ -349,7 +363,7 @@ public class OptimalLP {
                 demand += flow.getPakets();
             }
         }
-
+        String key = poolKey(er.getNode().getId(), chain);
         MPConstraint conserve = solver.makeConstraint(demand, demand,
                 "conserve_" + er.getNode().getId() + "_" + chain.hashCode());
 
@@ -359,6 +373,8 @@ public class OptimalLP {
                 continue;
 
             LPPath lp = new LPPath();
+            lp.path = path;
+            lp.poolKey = key;
             for (Node node : path.getNodePath()) {
                 Integer idx = mbIndex.get(node.getId());
                 if (idx != null) {
@@ -377,5 +393,46 @@ public class OptimalLP {
 
             allPaths.add(lp);
         }
+    }
+    public static Path sendPacketViaOptimalLP(EdgeRouter er, Flow flow, int packets, Result currentResult) {
+        List<PolicyType> chain = flow.getFlowPolicy();
+        String key = poolKey(er.getNode().getId(), chain);
+
+        Map<Path, Double> weights = null;
+
+        if (currentResult != null && currentResult.feasible && currentResult.lambda <= 1.0) {
+            weights = currentResult.pathTraffic.get(key);
+            if (weights != null && !weights.isEmpty()) {
+                lastFeasiblePathTraffic.put(key, new HashMap<>(weights)); // update cache
+            }
+        }
+
+        if (weights == null || weights.isEmpty()) {
+            weights = lastFeasiblePathTraffic.get(key); // fall back to previous LP result
+        }
+
+        if (weights != null && !weights.isEmpty()) {
+            Path chosen = pickWeighted(weights);
+            if (chosen != null) {
+                return chosen;
+            }
+        }
+
+        // no current LP path, no previous LP path -> random
+        return er.addTrafficToRandomPath(chain, packets);
+    }
+
+    private static Path pickWeighted(Map<Path, Double> weights) {
+        double total = 0;
+        for (double w : weights.values()) total += w;
+        if (total <= 0) return null;
+
+        double r = weightedRand.nextDouble() * total;
+        double cum = 0;
+        for (Map.Entry<Path, Double> e : weights.entrySet()) {
+            cum += e.getValue();
+            if (r <= cum) return e.getKey();
+        }
+        return weights.keySet().iterator().next(); // floating-point safety net
     }
 }

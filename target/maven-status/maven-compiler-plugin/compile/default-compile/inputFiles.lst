@@ -1,16 +1,16 @@
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/RouterUtils.java
 /Users/lucianterhorst/topology-demo/src/main/java/com/myproject/Globals.java
-/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/App.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/PacketAnimator.java
 /Users/lucianterhorst/topology-demo/src/main/java/com/myproject/EnforcementPath.java
-/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/App2.java
-/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/Flow.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/RandomUtils.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/OptimalLP.java
 /Users/lucianterhorst/topology-demo/src/main/java/com/myproject/EdgeRouter.java
-D:\gitHub\topology-demo\src\main\java\com\myproject\Flow.java
-D:\gitHub\topology-demo\src\main\java\com\myproject\Simulation.java
-D:\gitHub\topology-demo\src\main\java\com\myproject\App2.java
-D:\gitHub\topology-demo\src\main\java\com\myproject\App.java
-D:\gitHub\topology-demo\src\main\java\com\myproject\Globals.java
-D:\gitHub\topology-demo\src\main\java\com\myproject\EdgeRouter.java
-<<<<<<< HEAD
->>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
-=======
->>>>>>> b45bbe8d6a4c8daf6d0b3d2674c368526a4a489b
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/LyonMathTest.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/RoutingTable.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/App6.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/PathFinder.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/PacketContainer.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/ZionMathTest.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/GraphBuilder.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/Simulation.java
+/Users/lucianterhorst/topology-demo/src/main/java/com/myproject/Flow.java

@@ -204,7 +204,7 @@ class PathFinder {
         for (PolicyType type : middleBoxTypes) {
             Node nearest = findClosestMB(type, currentNode, maxHops);
             if (nearest == null) {
-                System.err.println("No reachable " + type + " from " + currentNode.getId());
+                //System.err.println("No reachable " + type + " from " + currentNode.getId());
                 return null;
             }
             org.graphstream.graph.Path segment = findClosestPathToNode(currentNode, nearest, graph);
@@ -243,7 +243,7 @@ class PathFinder {
             }
 
             if (nextBest.isEmpty()) {
-                System.err.println("No reachable " + type + " from previous layer");
+                //System.err.println("No reachable " + type + " from previous layer");
                 return null;
             }
 
