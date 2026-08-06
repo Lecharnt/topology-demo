@@ -42,7 +42,14 @@ public class App6RunSim {
     private static int totMinFWRand, totMinIDSRand, totMinTMRand, totMinWPRand;
     private static int totOverallMaxRand, totOverallMinRand;
 
-    // shared state used across the section methods below
+    private static int totmaxFWLP, totmaxIDSLP, totmaxTMLP, totmaxWPLP;
+    private static int totMinFWLP, totMinIDSLP, totMinTMLP, totMinWPLP;
+    private static int totOverallMaxLP, totOverallMinLP;
+    
+    private static int freshRunsCount = 0;
+    private static int lpRunsCount = 0;
+    private static int routingDataCount = 0; 
+
     private static Graph graph;
     private static Random rand;
     private static List<Integer> argsList = new ArrayList<>();
@@ -83,7 +90,7 @@ public class App6RunSim {
                 if (USE_SAVED_STATE) {
                     System.err.println("No saved simulation found — generating a fresh one instead.");
                 }
-                PathFinder.clearPublicVars(); // wipe stale nodes from the aborted load attempt
+                PathFinder.clearPublicVars();
                 graph = buildGraph(50, 16, 4, 8, 8, 4, 4);
                 sortNodesIntoLists();
                 buildFlowsAndEdgeRouters();
@@ -94,27 +101,29 @@ public class App6RunSim {
                 runOptimalLP();
                 printResultsAndDisplay();
                 anyFreshRun = true;
+                freshRunsCount++;
 
             } else {
-                if (graph == null) {
-                    System.err.println("Error: Graph is null after loading state!");
-                    return;
-                }
-                rebuildDijkstraCache();
-                // evaluate feasibility of the save
-                totPackets = 0;
-                for (EdgeRouter er : FakeEdgeRouters.values()) {
-                    totPackets += er.getTotPackets();
-                }
+    if (graph == null) {
+        System.err.println("Error: Graph is null after loading state!");
+        return;
+    }
+    rebuildDijkstraCache();
+    totPackets = 0;
+    for (EdgeRouter er : FakeEdgeRouters.values()) {
+        totPackets += er.getTotPackets();
+    }
 
-                tallyLoadedTraffic();
-                runOptimalLP();
-                printLoadedResults();
-            }
+    tallyLoadedTraffic();
+    runOptimalLP();
+    computeGreedyAndRandomForLoaded();
+    printLoadedResults();
+}
         }
 
         printFinalSummary();
     }
+
     private static boolean loadSavedSimulation() {
         Graph freshGraph = buildGraph(50, 16, 4, 8, 8, 4, 4);
         graph = freshGraph;
@@ -466,6 +475,7 @@ public class App6RunSim {
             }
         }
     }
+
     private static void tallyLoadedTraffic() {
         FWpackestLp.clear();
         IDSpackestLp.clear();
@@ -490,9 +500,40 @@ public class App6RunSim {
         }
     }
 
+    private static void computeGreedyAndRandomForLoaded() {
+        for (Node n : PathFinder.FWList)  FWpackest.put(n.getId(), 0);
+        for (Node n : PathFinder.IDSList) IDSpackest.put(n.getId(), 0);
+        for (Node n : PathFinder.TMList)  TMpackest.put(n.getId(), 0);
+        for (Node n : PathFinder.WPList)  WPpackest.put(n.getId(), 0);
+
+        FWpackestGreed = new HashMap<>(FWpackest);
+        IDSpackestGreed = new HashMap<>(IDSpackest);
+        TMpackestGreed = new HashMap<>(TMpackest);
+        WPpackestGreed = new HashMap<>(WPpackest);
+
+        FWpackestRand = new HashMap<>(FWpackest);
+        IDSpackestRand = new HashMap<>(IDSpackest);
+        TMpackestRand = new HashMap<>(TMpackest);
+        WPpackestRand = new HashMap<>(WPpackest);
+
+        for (Flow flow : flows) {
+            EdgeRouter er = FakeEdgeRouters.get(flow.getNode().getId());
+            if (er == null) continue;
+
+            Path greedyPath = PathFinder.findGreedyPathThroughMBs(flow.getNode(), flow.getFlowPolicy(), graph, 1000);
+            Path randomPath = er.addTrafficToRandomPath(flow.getFlowPolicy(), flow.getPakets());
+
+            if (greedyPath != null) {
+                tallyPath(greedyPath, flow.getPakets(), FWpackestGreed, IDSpackestGreed, TMpackestGreed, WPpackestGreed);
+            }
+            if (randomPath != null) {
+                tallyPath(randomPath, flow.getPakets(), FWpackestRand, IDSpackestRand, TMpackestRand, WPpackestRand);
+            }
+        }
+    }
+
     private static void printLoadedResults() {
         System.out.println();
-        System.out.println("Loaded traffic (as-saved, no new paths generated)");
 
         int fwMin = Collections.min(FWpackestLp.values());
         int fwMax = Collections.max(FWpackestLp.values());
@@ -510,6 +551,62 @@ public class App6RunSim {
         System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
         System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
         System.out.println("total packets in Network: " + totPackets);
+
+        totMinFWLP += fwMin;   totmaxFWLP += fwMax;
+        totMinIDSLP += idsMin; totmaxIDSLP += idsMax;
+        totMinTMLP += tmMin;   totmaxTMLP += tmMax;
+        totMinWPLP += wpMin;   totmaxWPLP += wpMax;
+        totOverallMaxLP += Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
+        totOverallMinLP += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
+        lpRunsCount++;
+
+        // Single (greedy) — now populated by computeGreedyAndRandomForLoaded()
+        int gFwMin = Collections.min(FWpackestGreed.values());
+        int gFwMax = Collections.max(FWpackestGreed.values());
+        int gIdsMin = Collections.min(IDSpackestGreed.values());
+        int gIdsMax = Collections.max(IDSpackestGreed.values());
+        int gTmMin = Collections.min(TMpackestGreed.values());
+        int gTmMax = Collections.max(TMpackestGreed.values());
+        int gWpMin = Collections.min(WPpackestGreed.values());
+        int gWpMax = Collections.max(WPpackestGreed.values());
+
+        System.out.println("\nSingle (recomputed on loaded flows)");
+        System.out.println("FW  Min: " + gFwMin + " Max: " + gFwMax);
+        System.out.println("IDS Min: " + gIdsMin + " Max: " + gIdsMax);
+        System.out.println("TM  Min: " + gTmMin + " Max: " + gTmMax);
+        System.out.println("WP  Min: " + gWpMin + " Max: " + gWpMax);
+        System.out.println("Overall Min: " + Collections.min(Arrays.asList(gFwMin, gIdsMin, gTmMin, gWpMin)));
+        System.out.println("Overall Max: " + Collections.max(Arrays.asList(gFwMax, gIdsMax, gTmMax, gWpMax)));
+
+        totOverallMaxSingle += Collections.max(Arrays.asList(gFwMax, gIdsMax, gTmMax, gWpMax));
+        totOverallMinSingle += Collections.min(Arrays.asList(gFwMin, gIdsMin, gTmMin, gWpMin));
+        totMinFWSingle += gFwMin; totMinIDSSingle += gIdsMin; totMinTMSingle += gTmMin; totMinWPSingle += gWpMin;
+        totmaxFWSingle += gFwMax; totmaxIDSSingle += gIdsMax; totmaxTMSingle += gTmMax; totmaxWPSingle += gWpMax;
+
+        // Random — now populated by computeGreedyAndRandomForLoaded()
+        int rFwMin = Collections.min(FWpackestRand.values());
+        int rFwMax = Collections.max(FWpackestRand.values());
+        int rIdsMin = Collections.min(IDSpackestRand.values());
+        int rIdsMax = Collections.max(IDSpackestRand.values());
+        int rTmMin = Collections.min(TMpackestRand.values());
+        int rTmMax = Collections.max(TMpackestRand.values());
+        int rWpMin = Collections.min(WPpackestRand.values());
+        int rWpMax = Collections.max(WPpackestRand.values());
+
+        System.out.println("\nRandom (recomputed on loaded flows)");
+        System.out.println("FW  Min: " + rFwMin + " Max: " + rFwMax);
+        System.out.println("IDS Min: " + rIdsMin + " Max: " + rIdsMax);
+        System.out.println("TM  Min: " + rTmMin + " Max: " + rTmMax);
+        System.out.println("WP  Min: " + rWpMin + " Max: " + rWpMax);
+        System.out.println("Overall Min: " + Collections.min(Arrays.asList(rFwMin, rIdsMin, rTmMin, rWpMin)));
+        System.out.println("Overall Max: " + Collections.max(Arrays.asList(rFwMax, rIdsMax, rTmMax, rWpMax)));
+
+        totMinFWRand += rFwMin; totMinIDSRand += rIdsMin; totMinTMRand += rTmMin; totMinWPRand += rWpMin;
+        totmaxFWRand += rFwMax; totmaxIDSRand += rIdsMax; totmaxTMRand += rTmMax; totmaxWPRand += rWpMax;
+        totOverallMaxRand += Collections.max(Arrays.asList(rFwMax, rIdsMax, rTmMax, rWpMax));
+        totOverallMinRand += Collections.min(Arrays.asList(rFwMin, rIdsMin, rTmMin, rWpMin));
+
+        routingDataCount++;
     }
 
     private static void printResultsAndDisplay() {
@@ -558,24 +655,31 @@ public class App6RunSim {
         totOverallMaxRand += Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
         totOverallMinRand += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
 
-        int fwMinLp = Collections.min(FWpackestLp.values());
-        int fwMaxLp = Collections.max(FWpackestLp.values());
-        int idsMinLp = Collections.min(IDSpackestLp.values());
-        int idsMaxLp = Collections.max(IDSpackestLp.values());
-        int tmMinLp = Collections.min(TMpackestLp.values());
-        int tmMaxLp = Collections.max(TMpackestLp.values());
-        int wpMinLp = Collections.min(WPpackestLp.values());
-        int wpMaxLp = Collections.max(WPpackestLp.values());
+        fwMin = Collections.min(FWpackestLp.values());
+        fwMax = Collections.max(FWpackestLp.values());
+        idsMin = Collections.min(IDSpackestLp.values());
+        idsMax = Collections.max(IDSpackestLp.values());
+        tmMin = Collections.min(TMpackestLp.values());
+        tmMax = Collections.max(TMpackestLp.values());
+        wpMin = Collections.min(WPpackestLp.values());
+        wpMax = Collections.max(WPpackestLp.values());
 
         System.out.println("\nLP");
-        System.out.println("FW  Min: " + fwMinLp + " Max: " + fwMaxLp);
-        System.out.println("IDS Min: " + idsMinLp + " Max: " + idsMaxLp);
-        System.out.println("TM  Min: " + tmMinLp + " Max: " + tmMaxLp);
-        System.out.println("WP  Min: " + wpMinLp + " Max: " + wpMaxLp);
-        System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMinLp, idsMinLp, tmMinLp, wpMinLp)));
-        System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMaxLp, idsMaxLp, tmMaxLp, wpMaxLp)));
+        System.out.println("FW  Min: " + fwMin + " Max: " + fwMax);
+        System.out.println("IDS Min: " + idsMin + " Max: " + idsMax);
+        System.out.println("TM  Min: " + tmMin + " Max: " + tmMax);
+        System.out.println("WP  Min: " + wpMin + " Max: " + wpMax);
+        System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
+        System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
 
+        totMinFWLP += fwMin; totMinIDSLP += idsMin; totMinTMLP += tmMin; totMinWPLP += wpMin;
+        totmaxFWLP += fwMax; totmaxIDSLP += idsMax; totmaxTMLP += tmMax; totmaxWPLP += wpMax;
+        totOverallMaxLP += Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
+        totOverallMinLP += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
+        lpRunsCount++;
         System.out.println("total packets in Network: " + totPackets);
+
+        routingDataCount++;
     }
 
     private static void printFinalSummary() {
@@ -584,32 +688,55 @@ public class App6RunSim {
         System.out.println("FINAL AVERAGES ACROSS " + TOT_RUNS + " RUNS");
         System.out.println("-------");
 
-        if (anyFreshRun) {
+        if (routingDataCount > 0) {
             System.out.println();
             System.out.println("----SINGLE");
-            System.out.println("Total Max Single FW: " + totmaxFWSingle / TOT_RUNS);
-            System.out.println("Total Min Single FW: " + totMinFWSingle / TOT_RUNS);
-            System.out.println("Total Max Single IDS: " + totmaxIDSSingle / TOT_RUNS);
-            System.out.println("Total Min Single IDS: " + totMinIDSSingle / TOT_RUNS);
-            System.out.println("Total Max Single TM: " + totmaxTMSingle / TOT_RUNS);
-            System.out.println("Total Min Single TM: " + totMinTMSingle / TOT_RUNS);
-            System.out.println("Total Max Single WP: " + totmaxWPSingle / TOT_RUNS);
-            System.out.println("Total Min Single WP: " + totMinWPSingle / TOT_RUNS);
-            System.out.println("Overall Max Single: " + totOverallMaxSingle / TOT_RUNS);
-            System.out.println("Overall Min Single: " + totOverallMinSingle / TOT_RUNS);
+            System.out.println("Total Max Single FW: " + totmaxFWSingle / routingDataCount);
+            System.out.println("Total Min Single FW: " + totMinFWSingle / routingDataCount);
+            System.out.println("Total Max Single IDS: " + totmaxIDSSingle / routingDataCount);
+            System.out.println("Total Min Single IDS: " + totMinIDSSingle / routingDataCount);
+            System.out.println("Total Max Single TM: " + totmaxTMSingle / routingDataCount);
+            System.out.println("Total Min Single TM: " + totMinTMSingle / routingDataCount);
+            System.out.println("Total Max Single WP: " + totmaxWPSingle / routingDataCount);
+            System.out.println("Total Min Single WP: " + totMinWPSingle / routingDataCount);
+            System.out.println("Overall Max Single: " + totOverallMaxSingle / routingDataCount);
+            System.out.println("Overall Min Single: " + totOverallMinSingle / routingDataCount);
 
             System.out.println();
             System.out.println("------RANDOM");
-            System.out.println("Total Max Random FW: " + totmaxFWRand / TOT_RUNS);
-            System.out.println("Total Min Random FW: " + totMinFWRand / TOT_RUNS);
-            System.out.println("Total Max Random IDS: " + totmaxIDSRand / TOT_RUNS);
-            System.out.println("Total Min Random IDS: " + totMinIDSRand / TOT_RUNS);
-            System.out.println("Total Max Random TM: " + totmaxTMRand / TOT_RUNS);
-            System.out.println("Total Min Random TM: " + totMinTMRand / TOT_RUNS);
-            System.out.println("Total Max Random WP: " + totmaxWPRand / TOT_RUNS);
-            System.out.println("Total Min Random WP: " + totMinWPRand / TOT_RUNS);
-            System.out.println("Overall Max Random: " + totOverallMaxRand / TOT_RUNS);
-            System.out.println("Overall Min Random: " + totOverallMinRand / TOT_RUNS);
+            System.out.println("Total Max Random FW: " + totmaxFWRand / routingDataCount);
+            System.out.println("Total Min Random FW: " + totMinFWRand / routingDataCount);
+            System.out.println("Total Max Random IDS: " + totmaxIDSRand / routingDataCount);
+            System.out.println("Total Min Random IDS: " + totMinIDSRand / routingDataCount);
+            System.out.println("Total Max Random TM: " + totmaxTMRand / routingDataCount);
+            System.out.println("Total Min Random TM: " + totMinTMRand / routingDataCount);
+            System.out.println("Total Max Random WP: " + totmaxWPRand / routingDataCount);
+            System.out.println("Total Min Random WP: " + totMinWPRand / routingDataCount);
+            System.out.println("Overall Max Random: " + totOverallMaxRand / routingDataCount);
+            System.out.println("Overall Min Random: " + totOverallMinRand / routingDataCount);
+        } else {
+            System.out.println();
+            System.out.println("----SINGLE / ------RANDOM");
+            System.out.println("No greedy or random path data was generated in any run. N/A.");
+        }
+
+        if (lpRunsCount > 0) {
+            System.out.println();
+            System.out.println("------LP");
+            System.out.println("Total Max LP FW: " + totmaxFWLP / lpRunsCount);
+            System.out.println("Total Min LP FW: " + totMinFWLP / lpRunsCount);
+            System.out.println("Total Max LP IDS: " + totmaxIDSLP / lpRunsCount);
+            System.out.println("Total Min LP IDS: " + totMinIDSLP / lpRunsCount);
+            System.out.println("Total Max LP TM: " + totmaxTMLP / lpRunsCount);
+            System.out.println("Total Min LP TM: " + totMinTMLP / lpRunsCount);
+            System.out.println("Total Max LP WP: " + totmaxWPLP / lpRunsCount);
+            System.out.println("Total Min LP WP: " + totMinWPLP / lpRunsCount);
+            System.out.println("Overall Max LP: " + totOverallMaxLP / lpRunsCount);
+            System.out.println("Overall Min LP: " + totOverallMinLP / lpRunsCount);
+        } else {
+            System.out.println();
+            System.out.println("------LP");
+            System.out.println("No LP-routed traffic data was available in any run. N/A.");
         }
 
         System.out.println();

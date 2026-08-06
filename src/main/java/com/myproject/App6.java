@@ -99,6 +99,12 @@ public class App6 {
     private static int totMinTMRand;
     private static int totMinWPRand;
 
+
+
+    private static int totmaxFWLP, totmaxIDSLP, totmaxTMLP, totmaxWPLP;
+    private static int totMinFWLP, totMinIDSLP, totMinTMLP, totMinWPLP;
+    private static int totOverallMaxLP, totOverallMinLP;
+    
     private static int totOverallMaxSingle;
     private static int totOverallMinSingle;
 
@@ -140,31 +146,43 @@ public class App6 {
         System.out.println("FINAL AVERAGES ACROSS " + totRuns + " RUNS");
         System.out.println("-------");
 
-        System.out.println();
-        System.out.println("----SINGLE");
-        System.out.println("Total Max Single FW: " + totmaxFWSingle / totRuns);
-        System.out.println("Total Min Single FW: " + totMinFWSingle / totRuns);
-        System.out.println("Total Max Single IDS: " + totmaxIDSSingle / totRuns);
-        System.out.println("Total Min Single IDS: " + totMinIDSSingle / totRuns);
-        System.out.println("Total Max Single TM: " + totmaxTMSingle / totRuns);
-        System.out.println("Total Min Single TM: " + totMinTMSingle / totRuns);
-        System.out.println("Total Max Single WP: " + totmaxWPSingle / totRuns);
-        System.out.println("Total Min Single WP: " + totMinWPSingle / totRuns);
-        System.out.println("Overall Max Single: " + totOverallMaxSingle / totRuns);
-        System.out.println("Overall Min Single: " + totOverallMinSingle / totRuns);
+            System.out.println();
+            System.out.println("----SINGLE");
+            System.out.println("Total Max Single FW: " + totmaxFWSingle / totRuns);
+            System.out.println("Total Min Single FW: " + totMinFWSingle / totRuns);
+            System.out.println("Total Max Single IDS: " + totmaxIDSSingle / totRuns);
+            System.out.println("Total Min Single IDS: " + totMinIDSSingle / totRuns);
+            System.out.println("Total Max Single TM: " + totmaxTMSingle / totRuns);
+            System.out.println("Total Min Single TM: " + totMinTMSingle / totRuns);
+            System.out.println("Total Max Single WP: " + totmaxWPSingle / totRuns);
+            System.out.println("Total Min Single WP: " + totMinWPSingle / totRuns);
+            System.out.println("Overall Max Single: " + totOverallMaxSingle / totRuns);
+            System.out.println("Overall Min Single: " + totOverallMinSingle / totRuns);
 
-        System.out.println();
-        System.out.println("------RANDOM");
-        System.out.println("Total Max Random FW: " + totmaxFWRand / totRuns);
-        System.out.println("Total Min Random FW: " + totMinFWRand / totRuns);
-        System.out.println("Total Max Random IDS: " + totmaxIDSRand / totRuns);
-        System.out.println("Total Min Random IDS: " + totMinIDSRand / totRuns);
-        System.out.println("Total Max Random TM: " + totmaxTMRand / totRuns);
-        System.out.println("Total Min Random TM: " + totMinTMRand / totRuns);
-        System.out.println("Total Max Random WP: " + totmaxWPRand / totRuns);
-        System.out.println("Total Min Random WP: " + totMinWPRand / totRuns);
-        System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
-        System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
+            System.out.println();
+            System.out.println("------RANDOM");
+            System.out.println("Total Max Random FW: " + totmaxFWRand / totRuns);
+            System.out.println("Total Min Random FW: " + totMinFWRand / totRuns);
+            System.out.println("Total Max Random IDS: " + totmaxIDSRand / totRuns);
+            System.out.println("Total Min Random IDS: " + totMinIDSRand / totRuns);
+            System.out.println("Total Max Random TM: " + totmaxTMRand / totRuns);
+            System.out.println("Total Min Random TM: " + totMinTMRand / totRuns);
+            System.out.println("Total Max Random WP: " + totmaxWPRand / totRuns);
+            System.out.println("Total Min Random WP: " + totMinWPRand / totRuns);
+            System.out.println("Overall Max Random: " + totOverallMaxRand / totRuns);
+            System.out.println("Overall Min Random: " + totOverallMinRand / totRuns);
+            System.out.println();
+            System.out.println("------LP");
+            System.out.println("Total Max Random FW: " + totmaxFWLP / totRuns);
+            System.out.println("Total Min Random FW: " + totMinFWLP / totRuns);
+            System.out.println("Total Max Random IDS: " + totmaxIDSLP / totRuns);
+            System.out.println("Total Min Random IDS: " + totMinIDSLP / totRuns);
+            System.out.println("Total Max Random TM: " + totmaxTMLP / totRuns);
+            System.out.println("Total Min Random TM: " + totMinTMLP / totRuns);
+            System.out.println("Total Max Random WP: " + totmaxWPLP / totRuns);
+            System.out.println("Total Min Random WP: " + totMinWPLP / totRuns);
+            System.out.println("Overall Max Random: " + totOverallMaxLP / totRuns);
+            System.out.println("Overall Min Random: " + totOverallMinLP / totRuns);
 
         
 
@@ -583,6 +601,7 @@ public class App6 {
         totPackets = 0;
 
         OptimalLP.Result lpResult = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
+        
 
         for (Flow flow : flows) {
             EdgeRouter er = FakeEdgeRouters.get(flow.getNode().getId());
@@ -784,24 +803,27 @@ public class App6 {
     totOverallMinRand += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
 
 
-
-    int fwMinLp = Collections.min(FWpackestLp.values());
-    int fwMaxLp = Collections.max(FWpackestLp.values());
-    int idsMinLp = Collections.min(IDSpackestLp.values());
-    int idsMaxLp = Collections.max(IDSpackestLp.values());
-    int tmMinLp = Collections.min(TMpackestLp.values());
-    int tmMaxLp = Collections.max(TMpackestLp.values());
-    int wpMinLp = Collections.min(WPpackestLp.values());
-    int wpMaxLp = Collections.max(WPpackestLp.values());
+    fwMin = Collections.min(FWpackestLp.values());
+    fwMax = Collections.max(FWpackestLp.values());
+    idsMin = Collections.min(IDSpackestLp.values());
+    idsMax = Collections.max(IDSpackestLp.values());
+    tmMin = Collections.min(TMpackestLp.values());
+    tmMax = Collections.max(TMpackestLp.values());
+    wpMin = Collections.min(WPpackestLp.values());
+    wpMax = Collections.max(WPpackestLp.values());
 
     System.out.println("\nLP");
-    System.out.println("FW  Min: " + fwMinLp + " Max: " + fwMaxLp);
-    System.out.println("IDS Min: " + idsMinLp + " Max: " + idsMaxLp);
-    System.out.println("TM  Min: " + tmMinLp + " Max: " + tmMaxLp);
-    System.out.println("WP  Min: " + wpMinLp + " Max: " + wpMaxLp);
+    System.out.println("FW  Min: " + fwMin + " Max: " + fwMax);
+    System.out.println("IDS Min: " + idsMin + " Max: " + idsMax);
+    System.out.println("TM  Min: " + tmMin + " Max: " + tmMax);
+    System.out.println("WP  Min: " + wpMin + " Max: " + wpMax);
+    System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin)));
+    System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax)));
 
-    System.out.println("Overall Min: " + Collections.min(Arrays.asList(fwMinLp, idsMinLp, tmMinLp, wpMinLp)));
-    System.out.println("Overall Max: " + Collections.max(Arrays.asList(fwMaxLp, idsMaxLp, tmMaxLp, wpMaxLp)));
+    totMinFWLP += fwMin; totMinIDSLP += idsMin; totMinTMLP += tmMin; totMinWPLP += wpMin;
+    totmaxFWLP += fwMax; totmaxIDSLP += idsMax; totmaxTMLP += tmMax; totmaxWPLP += wpMax;
+    totOverallMaxLP += Collections.max(Arrays.asList(fwMax, idsMax, tmMax, wpMax));
+    totOverallMinLP += Collections.min(Arrays.asList(fwMin, idsMin, tmMin, wpMin));
 }
 
 
@@ -848,4 +870,5 @@ public class App6 {
     }
     return true;
 }
+
 }

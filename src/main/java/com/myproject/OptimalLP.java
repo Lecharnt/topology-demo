@@ -55,11 +55,11 @@ public class OptimalLP {
     }
     public double findMinCapacity(Map<String, EdgeRouter> ers, int totPackets, Graph graph,
                             java.util.function.Consumer<Integer> setCapacity) {
-        double lo = 0, hi = 2_000_000; // upper bound guess
+        double lo = 0, hi = 2_000_000;
         double best = hi;
-        for (int i = 0; i < 40; i++) { // ~40 iterations gives plenty of precision
+        for (int i = 0; i < 40; i++) { 
             double mid = (lo + hi) / 2;
-            setCapacity.accept((int) mid);          // e.g. v -> FW_CAP = v (needs to be non-final/injectable)
+            setCapacity.accept((int) mid);         
             Result r = OptimalLP.solve(ers, totPackets, graph);
             if (r.feasible && r.lambda <= 1.0 + 1e-9) {
                 best = mid;
@@ -89,7 +89,7 @@ public class OptimalLP {
 
         MPVariable lambda = solver.makeNumVar(0, Double.POSITIVE_INFINITY, "lambda");
 
-        // sole capacity constraint per middlebox: sum(t) - lambda * capacity <= 0
+        // sole capacity constraint per middlebox
         Map<Integer, MPConstraint> capConstraints = new HashMap<>();
         for (int m = 0; m < capacity.length; m++) {
             MPConstraint greaterThen0 = solver.makeConstraint(-Double.POSITIVE_INFINITY, 0, "cap_m" + m);
@@ -382,8 +382,7 @@ public class OptimalLP {
                 }
             }
 
-            lp.t = solver.makeNumVar(0, Double.POSITIVE_INFINITY,
-                    "t_" + er.getNode().getId() + "_" + chain.hashCode() + "_h" + (h++));
+            lp.t = solver.makeNumVar(0, Double.POSITIVE_INFINITY,"t_" + er.getNode().getId() + "_" + chain.hashCode() + "_h" + (h++));
 
             conserve.setCoefficient(lp.t, 1);
 
@@ -418,21 +417,41 @@ public class OptimalLP {
             }
         }
 
-        // no current LP path, no previous LP path -> random
+        // no current LP path no previous LP path pick random
         return er.addTrafficToRandomPath(chain, packets);
     }
-
     private static Path pickWeighted(Map<Path, Double> weights) {
-        double total = 0;
-        for (double w : weights.values()) total += w;
-        if (total <= 0) return null;
 
-        double r = weightedRand.nextDouble() * total;
-        double cum = 0;
-        for (Map.Entry<Path, Double> e : weights.entrySet()) {
-            cum += e.getValue();
-            if (r <= cum) return e.getKey();
+        // Calculate the probability range for each path
+        double total = 0;
+        for (double w : weights.values()) {
+            total += w;
         }
-        return weights.keySet().iterator().next(); // floating-point safety net
+
+        // If the total weight is 0 or negative
+        if (total <= 0) {
+            return null;
+        }
+
+        // Generate a random value between 0 and the tot weight
+        double r = weightedRand.nextDouble() * total;
+
+        // Keeps track of the cumulative weight
+        double cum = 0;
+
+        // Go through each path and corresponding weight
+        for (Map.Entry<Path, Double> e : weights.entrySet()) {
+
+            // Add the current path weight to the cumulative weight
+            cum += e.getValue();
+
+            // If the random value falls within path range 
+            if (r <= cum) {
+                return e.getKey();
+            }
+        }
+        // return the first path.
+        return weights.keySet().iterator().next();
     }
+
 }
