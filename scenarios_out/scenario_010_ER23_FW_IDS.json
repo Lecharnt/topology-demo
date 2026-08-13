@@ -1,0 +1,24 @@
+{
+  "edge_switch": "ER23",
+  "policy": "FW_IDS",
+  "alternative_paths": [
+    {"id": "h0", "middleboxes": ["FW2", "IDS7"]},
+    {"id": "h1", "middleboxes": ["FW3", "IDS0"]},
+    {"id": "h2", "middleboxes": ["FW2", "IDS2"]},
+    {"id": "h3", "middleboxes": ["FW2", "IDS1"]},
+    {"id": "h4", "middleboxes": ["FW0", "IDS1"]},
+    {"id": "h5", "middleboxes": ["FW2", "IDS7"]},
+    {"id": "h6", "middleboxes": ["FW6", "IDS2"]},
+    {"id": "h7", "middleboxes": ["FW2", "IDS0"]},
+    {"id": "h8", "middleboxes": ["FW0", "IDS7"]},
+    {"id": "h9", "middleboxes": ["FW0", "IDS1"]},
+    {"id": "h10", "middleboxes": ["FW3", "IDS0"]},
+    {"id": "h11", "middleboxes": ["FW3", "IDS1"]},
+    {"id": "h12", "middleboxes": ["FW6", "IDS0"]},
+    {"id": "h13", "middleboxes": ["FW2", "IDS1"]},
+    {"id": "h14", "middleboxes": ["FW6", "IDS0"]},
+    {"id": "h15", "middleboxes": ["FW6", "IDS7"]}
+  ],
+  "total_traffic": 77770,
+  "ground_truth_optimal_weights": {"h0": 0.000000, "h1": 0.000000, "h2": 0.000000, "h3": 0.000000, "h4": 0.000000, "h5": 0.000000, "h6": 0.000000, "h7": 0.000000, "h8": 0.000000, "h9": 0.000000, "h10": 0.000000, "h11": 0.000000, "h12": 0.000000, "h13": 0.000000, "h14": 0.000000, "h15": 1.000000}
+}

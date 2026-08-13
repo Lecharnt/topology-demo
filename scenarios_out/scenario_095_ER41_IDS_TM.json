@@ -1,0 +1,16 @@
+{
+  "edge_switch": "ER41",
+  "policy": "IDS_TM",
+  "alternative_paths": [
+    {"id": "h0", "middleboxes": ["IDS7", "TM1"]},
+    {"id": "h1", "middleboxes": ["IDS4", "TM0"]},
+    {"id": "h2", "middleboxes": ["IDS2", "TM1"]},
+    {"id": "h3", "middleboxes": ["IDS1", "TM1"]},
+    {"id": "h4", "middleboxes": ["IDS1", "TM0"]},
+    {"id": "h5", "middleboxes": ["IDS4", "TM0"]},
+    {"id": "h6", "middleboxes": ["IDS7", "TM0"]},
+    {"id": "h7", "middleboxes": ["IDS1", "TM0"]}
+  ],
+  "total_traffic": 59493,
+  "ground_truth_optimal_weights": {"h0": 0.000000, "h1": 0.000000, "h2": 0.000000, "h3": 0.000000, "h4": 0.000000, "h5": 0.000000, "h6": 1.000000, "h7": 0.000000}
+}

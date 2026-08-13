@@ -171,7 +171,7 @@ public class App6RunSim {
             System.out.println("Capacity exceeded this run (lambda > 1) — skipped from stats");
             return;
         }
-
+        ScenarioExporter.exportAll(result, FakeEdgeRouters, "scenarios_out");
         feasibleOptRuns++;
 
         int fwMin = Integer.MAX_VALUE, fwMax = Integer.MIN_VALUE;
