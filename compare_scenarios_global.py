@@ -180,24 +180,33 @@ def run():
                 return prefix
         return None
 
+    def mb_sort_key(mb_id):
+        # e.g. "FW12" -> 12, so nodes print in numeric order not string order
+        digits = "".join(c for c in mb_id if c.isdigit())
+        return int(digits) if digits else 0
+
     def print_block(label, load_map):
-        """Print in the same FW/IDS/TM/WP Min/Max layout as the Java sim."""
+        """Per-node breakdown (every individual middlebox and its load),
+        plus the Min/Max summary per type in the same style as the Java sim."""
         by_type = defaultdict(list)
         for mb_id, load in load_map.items():
             t = mb_type(mb_id)
             if t:
-                by_type[t].append(load)
+                by_type[t].append((mb_id, load))
 
         print(f"\n{label}")
         overall_max_vals = []
         overall_min_vals = []
         for t in ("FW", "IDS", "TM", "WP"):
-            vals = by_type.get(t, [])
-            if not vals:
-                print(f"{t:3s} Min: n/a Max: n/a")
+            nodes = sorted(by_type.get(t, []), key=lambda x: mb_sort_key(x[0]))
+            if not nodes:
+                print(f"  {t}: n/a")
                 continue
-            t_min, t_max = min(vals), max(vals)
-            print(f"{t:3s} Min: {t_min:,.0f}  Max: {t_max:,.0f}")
+            for mb_id, load in nodes:
+                print(f"  {mb_id:6s} {load:>12,.0f}")
+            t_min = min(load for _, load in nodes)
+            t_max = max(load for _, load in nodes)
+            print(f"  {t:3s} Min: {t_min:,.0f}  Max: {t_max:,.0f}")
             overall_max_vals.append(t_max)
             overall_min_vals.append(t_min)
 

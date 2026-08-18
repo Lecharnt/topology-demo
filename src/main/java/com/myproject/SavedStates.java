@@ -23,35 +23,41 @@ public class SavedStates {
             FOLDER + File.separator + FOLDER2;
 
 
-   public static void saveState(
+     public static void saveState(
         Graph graph,
         List<Flow> flows,
         HashMap<String, EdgeRouter> fakeEdgeRouters) {
+        saveStateToFolder(graph, flows, fakeEdgeRouters, FOLDER2);
+    }
+
+    // NEW: same as saveState(), but lets you pick the subfolder under
+    // saved_states/ -- e.g. "infeasibleLP" for states that don't solve,
+    // so they never get mixed in with the ones loadRandState() picks from.
+    public static void saveStateToFolder(
+        Graph graph,
+        List<Flow> flows,
+        HashMap<String, EdgeRouter> fakeEdgeRouters,
+        String subfolderName) {
 
     try {
-        // Make sure folder exists
-        File folder = new File(SAVE_FOLDER);
+        String targetFolder = FOLDER + File.separator + subfolderName;
+        File folder = new File(targetFolder);
         if (!folder.exists()) {
             folder.mkdirs();
         }
 
-        // Create the state
         SimulationState state = new SimulationState(graph, flows, fakeEdgeRouters);
-        
-        // serializable form before writing
         state.prepareForSave();
 
-        // Create timestamp
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS").format(new Date());
-        
-        // Create filename
         String fileName = "network_state_" + timestamp + ".ser";
         File saveFile = new File(folder, fileName);
 
-        // Save state
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(saveFile))) {
             out.writeObject(state);
         }
+
+        System.out.println("Saved to " + targetFolder + File.separator + fileName);
 
     } catch (IOException e) {
         e.printStackTrace();

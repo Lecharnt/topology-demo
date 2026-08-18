@@ -1,0 +1,15 @@
+{
+  "edge_switch": "ER24",
+  "policy": "IDS_TM",
+  "alternative_paths": [
+    {"id": "h0", "middleboxes": ["IDS2", "TM0"]},
+    {"id": "h1", "middleboxes": ["IDS3", "TM2"]},
+    {"id": "h2", "middleboxes": ["IDS1", "TM2"]},
+    {"id": "h3", "middleboxes": ["IDS2", "TM2"]},
+    {"id": "h4", "middleboxes": ["IDS2", "TM2"]},
+    {"id": "h5", "middleboxes": ["IDS7", "TM0"]},
+    {"id": "h6", "middleboxes": ["IDS2", "TM0"]},
+    {"id": "h7", "middleboxes": ["IDS3", "TM0"]}
+  ],
+  "total_traffic": 76471
+}

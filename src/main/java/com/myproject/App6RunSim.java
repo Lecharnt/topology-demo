@@ -21,7 +21,7 @@ import java.nio.file.Paths;
 public class App6RunSim {
 
     private static final boolean USE_SAVED_STATE = true;
-    private static final String SAVED_STATE_NAME = null;
+    private static final String SAVED_STATE_NAME = "INnetwork_state_2026-08-14_02-56-31-092";
 
     private static final int TOT_RUNS = 1;
 
@@ -163,12 +163,14 @@ public class App6RunSim {
         if (!result.feasible) {
             System.out.println("lambda: " + result.lambda);
             System.out.println("OPTIMAL LP INFEASIBLE THIS RUN SKIPPED");
+            ScenarioExporter.exportAllNoGroundTruth(FakeEdgeRouters, "scenarios_out_infeasible");
             return;
         }
 
         if (result.lambda > 1.0) {
             System.out.println("lambda: " + result.lambda);
             System.out.println("Capacity exceeded this run (lambda > 1) — skipped from stats");
+            ScenarioExporter.exportAllNoGroundTruth(FakeEdgeRouters, "scenarios_out_infeasible");
             return;
         }
         ScenarioExporter.exportAll(result, FakeEdgeRouters, "scenarios_out");

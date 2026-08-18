@@ -1,0 +1,23 @@
+{
+  "edge_switch": "ER27",
+  "policy": "FW_IDS",
+  "alternative_paths": [
+    {"id": "h0", "middleboxes": ["FW6", "IDS0"]},
+    {"id": "h1", "middleboxes": ["FW6", "IDS6"]},
+    {"id": "h2", "middleboxes": ["FW2", "IDS6"]},
+    {"id": "h3", "middleboxes": ["FW2", "IDS6"]},
+    {"id": "h4", "middleboxes": ["FW3", "IDS7"]},
+    {"id": "h5", "middleboxes": ["FW6", "IDS0"]},
+    {"id": "h6", "middleboxes": ["FW3", "IDS6"]},
+    {"id": "h7", "middleboxes": ["FW6", "IDS7"]},
+    {"id": "h8", "middleboxes": ["FW3", "IDS5"]},
+    {"id": "h9", "middleboxes": ["FW3", "IDS5"]},
+    {"id": "h10", "middleboxes": ["FW6", "IDS7"]},
+    {"id": "h11", "middleboxes": ["FW3", "IDS0"]},
+    {"id": "h12", "middleboxes": ["FW6", "IDS7"]},
+    {"id": "h13", "middleboxes": ["FW2", "IDS7"]},
+    {"id": "h14", "middleboxes": ["FW3", "IDS0"]},
+    {"id": "h15", "middleboxes": ["FW2", "IDS6"]}
+  ],
+  "total_traffic": 68931
+}
