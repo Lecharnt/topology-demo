@@ -202,4 +202,32 @@ public static void listSavedStates() {
     }
     System.out.println("Total: " + files.length + " saved states\n");
 }
+public static List<String> getSavedStateNames() {
+    File folder = new File(SAVE_FOLDER);
+
+    if (!folder.exists() || !folder.isDirectory()) {
+        System.out.println("No saved states folder found: " + SAVE_FOLDER);
+        return java.util.Collections.emptyList();
+    }
+
+    File[] files = folder.listFiles(
+        (dir, name) -> name.endsWith(".ser")
+    );
+
+    if (files == null || files.length == 0) {
+        System.out.println("No saved states found in " + SAVE_FOLDER);
+        return java.util.Collections.emptyList();
+    }
+
+    List<String> stateNames = new java.util.ArrayList<>();
+
+    for (File file : files) {
+        String fileName = file.getName();
+        stateNames.add(fileName.substring(0, fileName.length() - 4));
+    }
+
+    stateNames.sort(String::compareToIgnoreCase);
+
+    return stateNames;
+}
 }

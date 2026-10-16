@@ -28,11 +28,16 @@ import org.graphstream.algorithm.Dijkstra;
  */
 public class App7GenerateTestStates {
 
-    private static final int TARGET_INFEASIBLE = 3;
-    private static final int TARGET_FEASIBLE = 2;
-    private static final int MAX_ATTEMPTS = 500; // safety cap
-
+    private static final int TARGET_INFEASIBLE = 0;
+    private static final int TARGET_FEASIBLE = 100;
+    private static final int MAX_ATTEMPTS = 1; // safety cap
+    private static final int NUM_PACKETS = 1000000; // how many flows to use per attempt
     private static final String INFEASIBLE_FOLDER = "infeasibleLP";
+    private static final boolean KEEP_SAME_TOPOLOGY = true; // if false, re-roll topology every attempt (not just flows/path pools)
+
+    private static final boolean creatingAITrainingData = true; // if false, re-roll topology every attempt (not just flows/path pools)
+    private static final boolean creatingAITestingData = true; // if false, re-roll topology every attempt (not just flows/path pools)
+
 
     private static Graph graph;
     private static Random rand;
@@ -41,7 +46,8 @@ public class App7GenerateTestStates {
     private static List<Flow> flows = new ArrayList<>();
 
     private static final List<String[]> summary = new ArrayList<>(); // [status, lambda, filenameFolder]
-
+private static final String TRAINING_FILE = "training_data.jsonl";
+private static boolean trainingFileInitialized = false;
     public static void main(String[] args) throws IOException {
         int savedFeasible = 0;
         int savedInfeasible = 0;
@@ -53,7 +59,14 @@ public class App7GenerateTestStates {
         clearPublicVars();
         PathFinder.clearPublicVars();
         setupConfig();
-        graph = buildGraph(50, 16, 4, 8, 8, 4, 4);
+        graph = buildGraph(
+            25,
+             16, 
+             4, 
+             8,
+              8, 
+              4, 
+              4);
         sortNodesIntoLists();
         wireTopologyEdges();
         styleGraphAndBuildDijkstraCache();
@@ -63,18 +76,33 @@ public class App7GenerateTestStates {
                 && attempt < MAX_ATTEMPTS) {
             attempt++;
 
-            // Re-roll only flows + path pools -- SAME graph/topology every time.
+            // Build the topology on the first attempt, and again on every attempt
+            // if KEEP_SAME_TOPOLOGY is false.
+            if (attempt == 1 || !KEEP_SAME_TOPOLOGY) {
+                buildTopology();
+                System.out.println(attempt == 1 && KEEP_SAME_TOPOLOGY
+                        ? "Base topology built once. Re-rolling flows/paths per attempt.\n"
+                        : "New topology built for attempt " + attempt + ".");
+            }
+
+            // Re-roll flows + path pools every attempt
             FakeEdgeRouters.clear();
             flows.clear();
             resetPathPools();
             buildFlowsAndEdgeRouters();
             populatePathPools();
-
+            printFingerprint(attempt);
             OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters, 0, graph);
             boolean feasible = result.feasible && result.lambda <= 1.0;
 
             if (feasible && savedFeasible < TARGET_FEASIBLE) {
-                SavedStates.saveState(graph, flows, FakeEdgeRouters); // goes to successfulLP
+                if (creatingAITrainingData) {
+                    TrainingDataExporter.export(FakeEdgeRouters, graph, result, "training_data.json");
+                }
+                if(creatingAITestingData) {
+                    SavedStates.saveState(graph, flows, FakeEdgeRouters); // goes to successfulLP
+
+                }
                 savedFeasible++;
                 summary.add(new String[]{"FEASIBLE", String.format("%.4f", result.lambda), "successfulLP"});
                 System.out.println("[attempt " + attempt + "] FEASIBLE  lambda=" + result.lambda
@@ -175,10 +203,38 @@ public class App7GenerateTestStates {
             FakeEdgeRouters.put(node.getId(), new EdgeRouter(node));
         }
 
-        List<String> lines = Files.readAllLines(Paths.get("src/main/java/com/myproject/flowSpread1.txt"));
-        Random random = new Random();
+        List<String> allLines = new ArrayList<>();
+        for (String l : Files.readAllLines(Paths.get("src/main/java/com/myproject/flowSpread1.txt"))) {
+            if (!l.trim().isEmpty()) allLines.add(l);   // skip blank lines
+        }
 
-        for (String line : lines) {
+        // Shuffle then take the first NUM_FLOWS
+        Collections.shuffle(allLines, rand);
+        
+
+
+        int totalPacks = 0;
+        List<String> allLines2 = new ArrayList<>();
+        for (int i = 0; totalPacks <= NUM_PACKETS; i++) {
+
+            if(i >= allLines.size()) {
+                Collections.shuffle(allLines, rand);
+                i=0;
+            }
+             String line = allLines.get(i);
+            String[] parts = line.trim().split("\\s+");
+            String ip = parts[0];
+            int count = Integer.parseInt(parts[1]);
+            totalPacks += count;
+            allLines2.add(line);
+        }
+
+        for (String line : allLines2) {
+
+            // if(i>=allLines.size()) {
+            //     Collections.shuffle(allLines, rand);
+            //     i=0;
+            // }
             String[] parts = line.trim().split("\\s+");
             String ip = parts[0];
             int count = Integer.parseInt(parts[1]);
@@ -189,7 +245,7 @@ public class App7GenerateTestStates {
             Flow currentFlow = new Flow(ip, count, edgeRouter.getNode());
 
             List<PolicyType> flowPolicy = new ArrayList<>();
-            switch (random.nextInt(3) + 1) {
+            switch (rand.nextInt(3) + 1) {
                 case 1:
                     flowPolicy.add(PolicyType.FW);
                     flowPolicy.add(PolicyType.IDS);
@@ -208,6 +264,8 @@ public class App7GenerateTestStates {
             edgeRouter.addFlow(ip, currentFlow);
             flows.add(currentFlow);
         }
+        System.out.println("Total flows generated: " + flows.size() + ", total packets: " + totalPacks);
+
     }
 
     private static void wireTopologyEdges() {
@@ -305,11 +363,49 @@ public class App7GenerateTestStates {
         }
     }
 
-    // NOTE: EdgeRouter objects get fully recreated in buildFlowsAndEdgeRouters()
+    private static void buildTopology() {
+        clearPublicVars();
+        PathFinder.clearPublicVars();
+        setupConfig();
+        graph = buildGraph(25, 16, 4, 8, 8, 4, 4);
+        sortNodesIntoLists();
+        wireTopologyEdges();
+        styleGraphAndBuildDijkstraCache();
+    }
+        // NOTE: EdgeRouter objects get fully recreated in buildFlowsAndEdgeRouters()
     // each attempt (FakeEdgeRouters.clear() + new EdgeRouter(node) per ER), so
     // their internal path-pool lists start empty automatically -- nothing to
     // reset by hand here. Kept as an explicit no-op for clarity/readability.
     private static void resetPathPools() {
         // intentionally empty -- see note above
     }
+    // Prints a fingerprint of the current topology + the per-attempt data.
+private static void printFingerprint(int attempt) {
+    // --- topology fingerprint: node count, edge count, and a hash of all edges ---
+    List<String> edgeList = new ArrayList<>();
+    graph.edges().forEach(e -> {
+        String a = e.getNode0().getId(), b = e.getNode1().getId();
+        edgeList.add(a.compareTo(b) < 0 ? a + "-" + b : b + "-" + a); // order-independent
+    });
+    Collections.sort(edgeList);
+    int topoHash = edgeList.hashCode();
+
+    // --- per-attempt data: flows and path pools ---
+    int totalPackets = 0;
+    for (Flow f : flows) totalPackets += f.getPakets();
+
+    EdgeRouter first = FakeEdgeRouters.values().iterator().next();
+    String firstPath = first.getFwIdsPaths().isEmpty() ? "none"
+            : first.getFwIdsPaths().get(0).getNodePath().toString();
+
+    System.out.println("---- FINGERPRINT attempt " + attempt + " (KEEP_SAME_TOPOLOGY=" + KEEP_SAME_TOPOLOGY + ") ----");
+    System.out.println("  nodes=" + graph.getNodeCount()
+            + "  edges=" + graph.getEdgeCount()
+            + "  TOPOLOGY HASH=" + topoHash);
+    System.out.println("  flows=" + flows.size() + "  packets=" + totalPackets);
+    System.out.println("  " + first.getNode().getId() + " pool sizes: FW_IDS_WP="
+            + first.getFwIdsWpPaths().size() + "  FW_IDS=" + first.getFwIdsPaths().size()
+            + "  IDS_TM=" + first.getIdsTmPaths().size());
+    System.out.println("  first FW_IDS path of " + first.getNode().getId() + ": " + firstPath);
+}
 }

@@ -118,13 +118,13 @@ public class App6CreateStates {
             PathFinder.clearPublicVars();
             setupConfig();
             graph = buildGraph(
-            50,
+            25,
             16,
             4,
-            8,
-            8,
             4,
-            4);
+            4,
+            2,
+            2);
             sortNodesIntoLists();
             buildFlowsAndEdgeRouters();
             wireTopologyEdges();

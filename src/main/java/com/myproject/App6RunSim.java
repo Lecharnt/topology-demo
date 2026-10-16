@@ -21,7 +21,11 @@ import java.nio.file.Paths;
 public class App6RunSim {
 
     private static final boolean USE_SAVED_STATE = true;
-    private static final String SAVED_STATE_NAME = "INnetwork_state_2026-08-14_02-56-31-092";
+    private static final boolean LOOP_ALL_SAVED_STATES = true;
+    private static final String SAVED_STATE_NAME =
+        "network_state_2026-10-14_11-50-35-896";
+    private static final String ALL_STATES_OUTPUT_FOLDER =
+        "scenarios_out_all_states";
 
     private static final int TOT_RUNS = 1;
 
@@ -79,51 +83,111 @@ public class App6RunSim {
     public static void main(String[] args) throws IOException {
         SavedStates.listSavedStates();
 
-        for (int index = 0; index < TOT_RUNS; index++) {
-            clearPublicVars();
-            PathFinder.clearPublicVars();
-            setupConfig();
-
-            boolean loaded = USE_SAVED_STATE && loadSavedSimulation();
-
-            if (!loaded) {
-                if (USE_SAVED_STATE) {
-                    System.err.println("No saved simulation found — generating a fresh one instead.");
-                }
-                PathFinder.clearPublicVars();
-                graph = buildGraph(50, 16, 4, 8, 8, 4, 4);
-                sortNodesIntoLists();
-                buildFlowsAndEdgeRouters();
-                wireTopologyEdges();
-                styleGraphAndBuildDijkstraCache();
-
-                simulateFlowsAndTallyPackets();
-                runOptimalLP();
-                printResultsAndDisplay();
-                anyFreshRun = true;
-                freshRunsCount++;
-
-            } else {
-    if (graph == null) {
-        System.err.println("Error: Graph is null after loading state!");
-        return;
-    }
-    rebuildDijkstraCache();
-    totPackets = 0;
-    for (EdgeRouter er : FakeEdgeRouters.values()) {
-        totPackets += er.getTotPackets();
-    }
-
-    tallyLoadedTraffic();
-    runOptimalLP();
-    computeGreedyAndRandomForLoaded();
-    printLoadedResults();
-}
+        if (LOOP_ALL_SAVED_STATES) {
+            runAllSavedStates();
+        } else {
+            runSingleState();
         }
 
         printFinalSummary();
     }
+    private static void runSingleState() {
+    for (int index = 0; index < TOT_RUNS; index++) {
+        clearPublicVars();
+        PathFinder.clearPublicVars();
+        setupConfig();
 
+        boolean loaded = USE_SAVED_STATE && loadSavedSimulation(SAVED_STATE_NAME);
+
+        if (!loaded) {
+            System.err.println("Could not load saved state: " + SAVED_STATE_NAME);
+            continue;
+        }
+
+        if (graph == null) {
+            System.err.println("Error: Graph is null after loading state!");
+            continue;
+        }
+
+        rebuildDijkstraCache();
+
+        totPackets = 0;
+        for (EdgeRouter er : FakeEdgeRouters.values()) {
+            totPackets += er.getTotPackets();
+        }
+
+        tallyLoadedTraffic();
+        runOptimalLP("scenarios_out");
+        computeGreedyAndRandomForLoaded();
+        printLoadedResults();
+    }
+}
+    private static void runAllSavedStates() throws IOException {
+        List<String> savedStates = SavedStates.getSavedStateNames();
+
+        if (savedStates.isEmpty()) {
+            System.out.println("No saved network states found.");
+            return;
+        }
+
+        for (String stateName : savedStates) {
+            System.out.println("\n==================================");
+            System.out.println("Processing state: " + stateName);
+            System.out.println("==================================");
+
+            clearPublicVars();
+            PathFinder.clearPublicVars();
+            setupConfig();
+
+            String safeFolderName = stateName.replaceAll(
+                    "[^a-zA-Z0-9._-]", "_");
+
+            String outputFolder = Paths.get(
+                    ALL_STATES_OUTPUT_FOLDER,
+                    safeFolderName
+            ).toString();
+
+            if (!loadSavedSimulation(stateName)) {
+                System.err.println(
+                        "Could not load state: " + stateName);
+                continue;
+            }
+
+            totPackets = 0;
+
+            for (EdgeRouter er : FakeEdgeRouters.values()) {
+                totPackets += er.getTotPackets();
+            }
+
+            rebuildDijkstraCache();
+            tallyLoadedTraffic();
+
+            runOptimalLP(outputFolder);
+            computeGreedyAndRandomForLoaded();
+            printLoadedResults();
+        }
+    }
+    private static boolean loadSavedSimulation(String stateName) {
+        Graph freshGraph = buildGraph(50, 16, 4, 8, 8, 4, 4);
+        graph = freshGraph;
+        sortNodesIntoLists();
+
+        SimulationState state =
+                SavedStates.loadState(stateName, freshGraph);
+
+        if (state == null) {
+            PathFinder.clearPublicVars();
+            graph = null;
+            return false;
+        }
+
+        graph = state.getGraph();
+        FakeEdgeRouters = state.edgeRouters;
+        flows = state.flows;
+
+        styleGraphAndBuildDijkstraCache();
+        return true;
+    }
     private static boolean loadSavedSimulation() {
         Graph freshGraph = buildGraph(50, 16, 4, 8, 8, 4, 4);
         graph = freshGraph;
@@ -157,23 +221,24 @@ public class App6RunSim {
         }
     }
 
-    private static void runOptimalLP() {
+    private static void runOptimalLP(String outputFolder) {
         OptimalLP.Result result = OptimalLP.solve(FakeEdgeRouters, totPackets, graph);
 
         if (!result.feasible) {
             System.out.println("lambda: " + result.lambda);
             System.out.println("OPTIMAL LP INFEASIBLE THIS RUN SKIPPED");
-            ScenarioExporter.exportAllNoGroundTruth(FakeEdgeRouters, "scenarios_out_infeasible");
+            ScenarioExporter.exportAllNoGroundTruth(
+        FakeEdgeRouters, outputFolder);
             return;
         }
 
         if (result.lambda > 1.0) {
             System.out.println("lambda: " + result.lambda);
             System.out.println("Capacity exceeded this run (lambda > 1) — skipped from stats");
-            ScenarioExporter.exportAllNoGroundTruth(FakeEdgeRouters, "scenarios_out_infeasible");
+            ScenarioExporter.exportAllNoGroundTruth(FakeEdgeRouters, outputFolder);
             return;
         }
-        ScenarioExporter.exportAll(result, FakeEdgeRouters, "scenarios_out");
+        ScenarioExporter.exportAll(result, FakeEdgeRouters, outputFolder);
         feasibleOptRuns++;
 
         int fwMin = Integer.MAX_VALUE, fwMax = Integer.MIN_VALUE;

@@ -21,7 +21,9 @@ import sys
 import json
 import glob
 from collections import defaultdict
+from dotenv import load_dotenv
 
+load_dotenv()
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 # -----------------------------------------------------------------

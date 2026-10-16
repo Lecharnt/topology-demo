@@ -25,7 +25,9 @@ import sys
 import json
 import glob
 from collections import defaultdict
+from dotenv import load_dotenv
 
+load_dotenv()
 os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 try:
@@ -45,6 +47,8 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 )
 model.load_adapter("Zii05/sdn-loadbalance-llama-lora", token=hf_token)
 FastLanguageModel.for_inference(model)
+if tokenizer.pad_token_id is None:
+    tokenizer.pad_token = tokenizer.eos_token
 print("Model loaded.\n")
 
 SYSTEM_PROMPT = (
@@ -80,7 +84,17 @@ def ask_model(scenario_dict):
     inputs = tokenizer.apply_chat_template(
         messages, tokenize=True, add_generation_prompt=True, return_tensors="pt"
     ).to("cuda")
-    outputs = model.generate(inputs, max_new_tokens=1500, temperature=0.1)
+    attention_mask = (inputs != tokenizer.pad_token_id).long()
+
+    n_paths = len(scenario_dict["alternative_paths"])
+    max_new_tokens = min(1500, 150 + 30 * n_paths)
+
+    outputs = model.generate(
+        inputs,
+        attention_mask=attention_mask,
+        max_new_tokens=max_new_tokens,
+        do_sample=False,
+    )
     response = tokenizer.decode(outputs[0][inputs.shape[1]:], skip_special_tokens=True)
     try:
         plan = json.loads(response)
